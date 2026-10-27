@@ -26,6 +26,20 @@ powershell -ExecutionPolicy Bypass -File scripts/check.ps1 -Integration
 
 Administrador: `GLPI_ADMIN_USER` (por defecto `admin`) y `GLPI_ADMIN_PASSWORD` de `.env`. Cambiar `.env` no cambia contraseñas de una base ya instalada: hacerlo desde GLPI. No se crea una cuenta cliente compartida; dar de alta usuarios nominativos.
 
+## Demostración en español
+
+La interfaz usa `es_MX` (español con mayor cobertura en el paquete incluido), conservando la zona horaria `America/Santiago`. El idioma global se aplica también a bases ya instaladas; las preferencias explícitas de otras cuentas se conservan. Después de cambiar idioma, cerrar sesión y volver a entrar.
+
+Para preparar ejemplos ficticios, ejecutar una vez:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/demo.ps1
+```
+
+Esto crea `cliente.demo` con perfil de cliente externo, sin permisos administrativos, y tres tickets `[DEMO]` en español: solicitud de acceso, incidente de descarga y consulta resuelta, con seguimientos públicos. Ingresar a GLPI con esa cuenta y abrir **Mis tickets**. La contraseña se genera en `.env.demo`, excluido de Git. No usar una contraseña institucional para la demostración.
+
+Repetir el comando conserva los tickets existentes y sus cambios; no duplica ejemplos ni restablece contraseñas. No se cargan ejemplos automáticamente al instalar. Si ya existe `cliente.demo` ajeno a esta demostración, el script se detiene sin modificarlo. Para dejar de usar la demostración, desactivar su cuenta desde GLPI; no purgar datos sin revisión.
+
 ## Configuración
 
 La fuente editable es [config/hub.json](config/hub.json). [docker/provision-hub.php](docker/provision-hub.php) utiliza las clases nativas de GLPI, sin modificar su núcleo, para crear:

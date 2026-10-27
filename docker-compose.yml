@@ -41,7 +41,7 @@ services:
       DB_NAME: ${GLPI_DB_NAME:-glpi}
       DB_USER: ${GLPI_DB_USER:-glpi}
       DB_PASSWORD: ${GLPI_DB_PASSWORD:?Ejecuta scripts/init.ps1}
-      GLPI_LANGUAGE: ${GLPI_LANGUAGE:-es_CL}
+      GLPI_LANGUAGE: ${GLPI_LANGUAGE:-es_MX}
       GLPI_ADMIN_USER: ${GLPI_ADMIN_USER:-admin}
       GLPI_ADMIN_PASSWORD: ${GLPI_ADMIN_PASSWORD:?Ejecuta scripts/init.ps1}
       GLPI_CONSULTA_USER: ${GLPI_CONSULTA_USER:-consulta}

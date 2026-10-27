@@ -9,7 +9,7 @@ cd /var/www/html
 : "${DB_NAME:=glpi}"
 : "${DB_USER:=glpi}"
 : "${DB_PASSWORD:?DB_PASSWORD requerida}"
-: "${GLPI_LANGUAGE:=es_CL}"
+: "${GLPI_LANGUAGE:=es_MX}"
 : "${GLPI_ADMIN_USER:=admin}"
 : "${GLPI_ADMIN_PASSWORD:?GLPI_ADMIN_PASSWORD requerida}"
 : "${GLPI_CONSULTA_USER:=consulta}"

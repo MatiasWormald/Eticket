@@ -29,7 +29,11 @@ $_SESSION['glpiactive_entity'] = 0;
 $_SESSION['glpiactiveentities'] = [0];
 $_SESSION['glpiname'] = 'eticket-provision';
 $_SESSION['glpiID'] = 0;
-$_SESSION['glpilanguage'] = 'es_CL';
+$language = getenv('GLPI_LANGUAGE') ?: 'es_MX';
+if (!Glpi\Locale\LanguageRegistry::has($language)) {
+    throw new RuntimeException('Idioma no soportado por GLPI: ' . $language);
+}
+$_SESSION['glpilanguage'] = $language;
 $_SESSION['glpicronuserrunning'] = 'eticket-provision';
 
 $cfg = json_decode(file_get_contents('/usr/local/share/eticket/hub.json'), true, 512, JSON_THROW_ON_ERROR);
@@ -241,7 +245,7 @@ foreach ($cfg['services'] as $service) {
     }
 }
 // API cerrada en el nivel 1, aun si existía una configuración experimental.
-Config::setConfigurationValues('core', ['enable_api' => 0, 'enable_hlapi' => 0]);
+Config::setConfigurationValues('core', ['enable_api' => 0, 'enable_hlapi' => 0, 'language' => $language]);
 $DB->update('glpi_crontasks', ['mode' => CronTask::MODE_EXTERNAL], ['name' => ['slaticket', 'queuednotification', 'watcher']]);
 $DB->commit();
 } catch (Throwable $error) {

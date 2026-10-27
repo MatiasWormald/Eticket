@@ -19,6 +19,13 @@ jobs:
           docker compose exec -T --user www-data glpi php /usr/local/bin/test-hub.php
           docker compose exec -T --user www-data glpi php /usr/local/bin/provision-hub.php
           docker compose exec -T --user www-data glpi php /usr/local/bin/check-hub.php
+      - name: Demostración en español sin duplicados
+        shell: pwsh
+        run: |
+          ./scripts/demo.ps1
+          ./scripts/demo.ps1
+          docker compose exec -T --user www-data glpi php /usr/local/bin/check-demo.php
+          if ($LASTEXITCODE -ne 0) { throw 'Demostración inválida' }
       - name: Logs si falla
         if: failure()
         run: docker compose logs --tail 100 glpi cron
