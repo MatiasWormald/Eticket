@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crear consulta | Hub Tech ULS</title>
+  <meta name="theme-color" content="#c8102e">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    .form-section { padding: clamp(40px, 6vw, 80px) 0; }
+    .form-grid { display: grid; grid-template-columns: 1fr .9fr; gap: clamp(30px, 6vw, 70px); align-items: start; }
+    .form-card { border: 1px solid var(--line); border-radius: 18px; background: #fff; box-shadow: var(--shadow-sm); overflow: hidden; }
+    .form-card-header { padding: 26px 30px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, #fff, var(--soft)); }
+    .form-card-header h2 { margin: 0; font-size: clamp(1.6rem, 2.6vw, 2.2rem); }
+    .form-card-header p { margin: .4rem 0 0; color: var(--muted); }
+    .form-body { display: grid; gap: 18px; padding: 30px; }
+    .field-group { display: grid; gap: 10px; }
+    .field-label { font-weight: 700; font-size: .95rem; }
+    .field-hint { color: var(--muted); font-size: .84rem; }
+    .input, .select, .textarea { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; font: inherit; font-size: .98rem; background: #fff; }
+    .textarea { min-height: 160px; resize: vertical; line-height: 1.7; }
+    .input:focus, .select:focus, .textarea:focus { outline: 3px solid rgba(200,16,46,.14); border-color: rgba(200,16,46,.6); }
+    .form-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .alert { display: none; padding: 14px 18px; border-radius: 12px; border: 1px solid var(--line); background: var(--soft); }
+    .alert.is-visible { display: block; }
+    .alert-success { border-color: rgba(22,163,74,.4); background: rgba(22,163,74,.08); color: #14532d; }
+    .alert-error { border-color: rgba(200,16,46,.4); background: rgba(200,16,46,.08); color: var(--red-dark); }
+    .side-panel { display: grid; gap: 16px; }
+    .side-card { border: 1px solid var(--line); border-radius: 16px; padding: 24px; background: #fff; box-shadow: var(--shadow-sm); }
+    .side-card-dark { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .side-card-dark p { color: #b9c0ca; }
+    .check-list-sm { display: grid; gap: 12px; margin: 18px 0 0; padding: 0; list-style: none; }
+    .check-list-sm li { display: flex; gap: 12px; align-items: flex-start; }
+    .check-list-sm span { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--red-soft); color: var(--red); margin-top: 2px; }
+    @media (max-width: 980px) { .form-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html"><img src="assets/logo.svg" alt="Hub Tech ULS"></a>
+      <nav class="main-nav" id="main-nav">
+        <a href="index.html">Inicio</a>
+        <a href="consultas.html">Centro de consultas</a>
+        <a class="is-active" href="crear-consulta.html">Crear consulta</a>
+        <a href="panel-atencion.html">Panel de atención</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container page-hero-grid">
+        <div>
+          <p class="eyebrow"><span class="pulse"></span> Sin pasar por la interfaz clásica</p>
+          <h1>Crear <span class="accent">consulta</span> desde el Tech Hub</h1>
+          <p class="lead">Completa este formulario y tu ticket se crea directamente en GLPI. Todo queda registrado y el equipo lo verá desde su panel de atención.</p>
+        </div>
+        <div class="page-hero-actions">
+          <a class="action-card" href="panel-atencion.html">
+            <span class="action-icon action-icon-dark"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4V4Zm2 2v12h12V6H6Zm2 2h8v2H8V8Zm0 4h8v2H8v-2Zm0 4h5v2H8v-2Z" fill="currentColor"/></svg></span>
+            <div><strong>Ir al panel de atención</strong><small>Para técnicos y administradores</small></div>
+            <span class="action-arrow">→</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <div class="container form-grid">
+        <div class="form-card">
+          <div class="form-card-header">
+            <h2>Formulario de consulta</h2>
+            <p>Usa lenguaje claro. Cuanta más información, más rápido podremos ayudarte.</p>
+          </div>
+          <form class="form-body" id="ticket-form">
+            <div class="field-group">
+              <label class="field-label" for="tipo">Tipo de solicitud</label>
+              <select class="select" id="tipo" name="tipo">
+                <option value="1">Incidente - Algo dejó de funcionar</option>
+                <option value="1">Consulta - Tengo una duda</option>
+                <option value="2">Requerimiento - Necesito algo nuevo</option>
+                <option value="1">Seguridad - Reporte urgente</option>
+              </select>
+              <span class="field-hint">Selecciona el que mejor se ajusta a tu caso.</span>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="titulo">Asunto / Título *</label>
+              <input class="input" id="titulo" name="titulo" placeholder="Ej. No puedo acceder a mi correo" required>
+              <span class="field-hint">Un resumen breve y directo.</span>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="descripcion">Descripción del caso *</label>
+              <textarea class="textarea" id="descripcion" name="descripcion" placeholder="¿Qué ocurre? ¿Cuándo empezó? ¿Qué esperabas que pasara? ¿Has intentado algo?" required></textarea>
+              <span class="field-hint">Incluye pasos para reproducirlo si es un incidente.</span>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn btn-primary" type="submit">Enviar consulta</button>
+              <a class="btn btn-ghost" href="consultas.html">Volver al centro de consultas</a>
+            </div>
+
+            <div class="alert" id="form-alert"></div>
+          </form>
+        </div>
+
+        <aside class="side-panel">
+          <div class="side-card">
+            <p class="eyebrow">Recomendaciones</p>
+            <h3>Para resolver más rápido</h3>
+            <ul class="check-list-sm">
+              <li><span>✓</span><div><strong>Sé concreto</strong><br><small class="muted">Indica qué sistema, equipo o aplicación.</small></div></li>
+              <li><span>✓</span><div><strong>Agrega contexto</strong><br><small class="muted">Fecha/hora, lugar o usuario afectado.</small></div></li>
+              <li><span>✓</span><div><strong>Adjunta evidencia</strong><br><small class="muted">Capturas de pantalla o mensajes de error.</small></div></li>
+              <li><span>✓</span><div><strong>No compartas claves</strong><br><small class="muted">Nunca envíes contraseñas o tokens.</small></div></li>
+            </ul>
+          </div>
+          <div class="side-card side-card-dark">
+            <p class="eyebrow eyebrow-light">Integrado con GLPI</p>
+            <h3>Todo queda trazable</h3>
+            <p>Tu consulta se crea con trazabilidad completa. Podrás dar seguimiento desde el panel o consultando con el equipo. El motor sigue siendo GLPI, pero tú te quedas en el Tech Hub.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-bottom">
+      <span>© <span data-year>2026</span> Hub Tech ULS · eTicket</span>
+      <span>API puente: http://localhost:8082</span>
+    </div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    const API_URL = "http://localhost:8082";
+    const form = document.getElementById("ticket-form");
+    const alertBox = document.getElementById("form-alert");
+
+    function showAlert(type, message) {
+      alertBox.className = "alert alert-" + type + " is-visible";
+      alertBox.textContent = message;
+      alertBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = form.querySelector("button[type=submit]");
+      btn.disabled = true;
+      btn.textContent = "Enviando...";
+
+      const payload = {
+        titulo: document.getElementById("titulo").value,
+        descripcion: document.getElementById("descripcion").value,
+        tipo: document.getElementById("tipo").value,
+        solicitante: "consulta"
+      };
+
+      try {
+        const res = await fetch(API_URL + "/crear-ticket", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok && data.data && data.data.id) {
+          showAlert("success", "¡Consulta enviada! Tu ticket se creó correctamente. ID: " + data.data.id + ". Ahora puedes darle seguimiento desde el panel o contactando a la mesa de ayuda.");
+          form.reset();
+        } else {
+          showAlert("error", "No se pudo crear la consulta. " + (data.error || "Revisa los datos e intenta nuevamente."));
+        }
+      } catch (err) {
+        showAlert("error", "Error de conexión con el puente API. Asegúrate de que los contenedores estén levantados.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Enviar consulta";
+      }
+    });
+  </script>
+</body>
+</html>

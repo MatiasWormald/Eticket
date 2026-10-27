@@ -1,0 +1,27 @@
+name: Validar entorno GLPI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar entorno y paquete
+        shell: pwsh
+        run: ./scripts/init.ps1
+      - name: Instalación limpia
+        run: docker compose up -d --build --wait --wait-timeout 600
+      - name: Validar configuración e idempotencia
+        run: |
+          docker compose exec -T --user www-data glpi php /usr/local/bin/check-hub.php
+          docker compose exec -T --user www-data glpi php /usr/local/bin/test-hub.php
+          docker compose exec -T --user www-data glpi php /usr/local/bin/provision-hub.php
+          docker compose exec -T --user www-data glpi php /usr/local/bin/check-hub.php
+      - name: Logs si falla
+        if: failure()
+        run: docker compose logs --tail 100 glpi cron
+      - name: Limpiar entorno efímero
+        if: always()
+        run: docker compose down -v

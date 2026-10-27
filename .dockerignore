@@ -1,0 +1,9 @@
+.git
+.env
+.env.*
+!.env.example
+glpi/
+Informacion del proyecto/
+backups/
+artifacts/
+**/*.log

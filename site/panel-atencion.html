@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel de Atención | Hub Tech ULS</title>
+  <meta name="theme-color" content="#c8102e">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    .panel-section { padding: clamp(30px, 5vw, 60px) 0; }
+    .panel-header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 18px; align-items: flex-start; margin-bottom: clamp(24px, 4vw, 40px); }
+    .panel-filters { display: flex; flex-wrap: wrap; gap: 10px; }
+    .filter-pill { border: 1px solid var(--line); border-radius: 999px; padding: 9px 16px; background: #fff; font-weight: 600; font-size: .9rem; }
+    .filter-pill.is-active { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .table-card { border: 1px solid var(--line); border-radius: 18px; background: #fff; box-shadow: var(--shadow-sm); overflow: hidden; }
+    .table-head { display: grid; grid-template-columns: 90px 1.6fr 1fr 1fr 140px 160px; gap: 16px; padding: 14px 28px; background: var(--soft); border-bottom: 1px solid var(--line); font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 800; }
+    .ticket-row { display: grid; grid-template-columns: 90px 1.6fr 1fr 1fr 140px 160px; gap: 16px; align-items: center; padding: 18px 28px; border-bottom: 1px solid var(--line); }
+    .ticket-row:last-child { border-bottom: none; }
+    .ticket-id { font-weight: 800; color: var(--red); }
+    .ticket-title { font-weight: 700; }
+    .ticket-meta { color: var(--muted); font-size: .9rem; }
+    .badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; font-size: .82rem; font-weight: 700; }
+    .badge-new { background: rgba(200,16,46,.1); color: var(--red-dark); }
+    .badge-prog { background: rgba(29,63,143,.1); color: #1d3f8f; }
+    .badge-done { background: rgba(22,163,74,.12); color: #14532d; }
+    .badge-wait { background: rgba(122,67,0,.12); color: #7a4300; }
+    .row-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .empty-state { padding: 40px; text-align: center; color: var(--muted); }
+    .drawer { position: fixed; inset: 0; display: none; align-items: flex-start; justify-content: flex-end; z-index: 200; }
+    .drawer.is-open { display: flex; }
+    .drawer-backdrop { position: absolute; inset: 0; background: rgba(11,13,16,.5); }
+    .drawer-panel { position: relative; width: min(520px, 100%); height: 100%; background: #fff; box-shadow: -40px 0 80px rgba(11,13,16,.25); display: grid; grid-template-rows: auto 1fr auto; }
+    .drawer-header { padding: 26px 30px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; }
+    .drawer-body { padding: 26px 30px; overflow: auto; display: grid; gap: 18px; }
+    .drawer-footer { padding: 18px 30px; border-top: 1px solid var(--line); display: flex; gap: 12px; }
+    .timeline-lite { display: grid; gap: 14px; }
+    .timeline-item-lite { padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+    @media (max-width: 1080px) {
+      .table-head { display: none; }
+      .ticket-row { grid-template-columns: 1fr; gap: 10px; }
+      .row-actions { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html"><img src="assets/logo.svg" alt="Hub Tech ULS"></a>
+      <nav class="main-nav" id="main-nav">
+        <a href="index.html">Inicio</a>
+        <a href="consultas.html">Centro de consultas</a>
+        <a href="crear-consulta.html">Crear consulta</a>
+        <a class="is-active" href="panel-atencion.html">Panel de atención</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container page-hero-grid">
+        <div>
+          <p class="eyebrow"><span class="pulse"></span> Interfaz simplificada</p>
+          <h1>Panel de <span class="accent">atención</span></h1>
+          <p class="lead">Todo en español, sin menús confusos. Toma, responde y resuelve tickets desde aquí. El backend sigue siendo GLPI.</p>
+        </div>
+        <div class="page-hero-actions">
+          <a class="action-card action-card-primary" href="crear-consulta.html">
+            <span class="action-icon"><svg viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z" fill="currentColor"/></svg></span>
+            <div><strong>Crear consulta de prueba</strong><small>Ver el flujo completo</small></div>
+            <span class="action-arrow">→</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel-section">
+      <div class="container">
+        <div class="panel-header">
+          <div>
+            <h2 style="margin-bottom:.4rem">Bandeja de tickets</h2>
+            <p class="muted" style="margin:0">Listado directo desde GLPI vía API puente</p>
+          </div>
+          <div class="panel-filters">
+            <button class="filter-pill is-active">Todos</button>
+            <button class="filter-pill">Nuevos</button>
+            <button class="filter-pill">En proceso</button>
+            <button class="filter-pill">Pendientes</button>
+            <button class="filter-pill">Resueltos</button>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-head">
+            <div>ID</div>
+            <div>Asunto</div>
+            <div>Solicitante</div>
+            <div>Categoría</div>
+            <div>Estado</div>
+            <div style="text-align:right">Acciones</div>
+          </div>
+          <div id="ticket-list">
+            <div class="empty-state">Cargando tickets...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="drawer" id="drawer">
+    <div class="drawer-backdrop" id="drawer-close"></div>
+    <aside class="drawer-panel">
+      <div class="drawer-header">
+        <div>
+          <p class="eyebrow" style="margin-bottom:.4rem">Ticket</p>
+          <h3 id="drawer-title" style="margin:0">#000000</h3>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="drawer-x">Cerrar</button>
+      </div>
+      <div class="drawer-body">
+        <div>
+          <p class="eyebrow">Descripción</p>
+          <div id="drawer-content" class="muted" style="white-space:pre-wrap;line-height:1.8"></div>
+        </div>
+        <div>
+          <p class="eyebrow">Seguimiento</p>
+          <div class="timeline-lite" id="drawer-followups">
+            <div class="muted">Sin seguimientos aún.</div>
+          </div>
+        </div>
+        <div>
+          <label class="field-label" for="followup-text">Añadir respuesta / seguimiento</label>
+          <textarea class="textarea" id="followup-text" placeholder="Escribe tu respuesta en español..."></textarea>
+        </div>
+      </div>
+      <div class="drawer-footer">
+        <button class="btn btn-primary" id="btn-followup">Enviar seguimiento</button>
+        <button class="btn btn-ghost" id="btn-take">Tomar ticket</button>
+        <button class="btn btn-ghost" id="btn-resolve">Marcar como resuelto</button>
+      </div>
+    </aside>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="assets/app.js"></script>
+  <script>
+    const API_URL = "http://localhost:8082";
+    const listEl = document.getElementById("ticket-list");
+    let currentId = null;
+
+    function badge(status) {
+      if (status == 1) return '<span class="badge badge-new">Nuevo</span>';
+      if (status == 2 || status == 3) return '<span class="badge badge-prog">En proceso</span>';
+      if (status == 4) return '<span class="badge badge-wait">Pendiente</span>';
+      if (status == 5) return '<span class="badge badge-done">Resuelto</span>';
+      if (status == 6) return '<span class="badge badge-done">Cerrado</span>';
+      return '<span class="badge badge-new">Sin estado</span>';
+    }
+
+    async function loadTickets() {
+      try {
+        const res = await fetch(API_URL + "/tickets");
+        const data = await res.json();
+        const items = data.data?.data || data.data || [];
+        if (!Array.isArray(items) || items.length === 0) {
+          listEl.innerHTML = '<div class="empty-state">No hay tickets o el API aún no devuelve el listado.<br><small>Los tickets creados desde el formulario aparecerán aquí.</small></div>';
+          return;
+        }
+        listEl.innerHTML = "";
+        items.slice(0, 50).forEach(t => {
+          const row = document.createElement("div");
+          row.className = "ticket-row";
+          row.innerHTML = `
+            <div class="ticket-id">#${t.id}</div>
+            <div><div class="ticket-title">${t.name || "(Sin asunto)"}</div></div>
+            <div class="ticket-meta">${t._users_id_requester || "-"}</div>
+            <div class="ticket-meta">${t.itilcategories_id || "-"}</div>
+            <div>${badge(t.status)}</div>
+            <div class="row-actions"><button class="btn btn-ghost btn-sm" data-open="${t.id}">Ver / Atender</button></div>
+          `;
+          listEl.appendChild(row);
+        });
+        listEl.querySelectorAll("[data-open]").forEach(btn => btn.addEventListener("click", () => openTicket(btn.dataset.open)));
+      } catch (e) {
+        listEl.innerHTML = '<div class="empty-state">Error al cargar tickets desde el puente API.</div>';
+      }
+    }
+
+    async function openTicket(id) {
+      currentId = id;
+      const res = await fetch(API_URL + "/ticket/" + id);
+      const data = await res.json();
+      const t = data.data || {};
+      document.getElementById("drawer-title").textContent = "#" + id + " - " + (t.name || "");
+      document.getElementById("drawer-content").textContent = t.content || "(Sin descripción)";
+      document.getElementById("drawer").classList.add("is-open");
+    }
+
+    document.getElementById("drawer-close").addEventListener("click", ()=>document.getElementById("drawer").classList.remove("is-open"));
+    document.getElementById("drawer-x").addEventListener("click", ()=>document.getElementById("drawer").classList.remove("is-open"));
+    document.getElementById("btn-followup").addEventListener("click", async ()=>{
+      const txt = document.getElementById("followup-text").value;
+      if(!txt.trim()) return alert("Escribe un seguimiento");
+      await fetch(API_URL + "/ticket/" + currentId + "/seguimiento", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({texto: txt})});
+      alert("Seguimiento enviado");
+      document.getElementById("followup-text").value = "";
+    });
+    document.getElementById("btn-take").addEventListener("click", async ()=>{
+      await fetch(API_URL + "/ticket/" + currentId + "/estado", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({status: 2})});
+      alert("Ticket marcado como En proceso");
+      loadTickets();
+    });
+    document.getElementById("btn-resolve").addEventListener("click", async ()=>{
+      await fetch(API_URL + "/ticket/" + currentId + "/estado", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({status: 5})});
+      alert("Ticket marcado como Resuelto");
+      loadTickets();
+    });
+
+    loadTickets();
+  </script>
+</body>
+</html>

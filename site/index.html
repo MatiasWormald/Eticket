@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Consultas y Soporte | Hub Tech ULS</title>
+  <meta name="description" content="Centro de consultas y mesa de ayuda del Hub Tech ULS. Gestiona incidentes, solicitudes y requerimientos con trazabilidad y SLA.">
+  <meta name="theme-color" content="#c8102e">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="Hub Tech ULS - Inicio">
+        <img src="assets/logo.svg" alt="Hub Tech ULS" width="252" height="56">
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
+        <span class="sr-only">Abrir menú</span>
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="main-nav" id="main-nav" aria-label="Navegación principal">
+        <a href="#servicios">Servicios</a>
+        <a href="#glpi">Plataforma</a>
+        <a href="#como-funciona">Cómo funciona</a>
+        <a href="consultas.html">Consultas</a>
+            <a class="btn btn-sm btn-primary" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">Crear consulta</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenido">
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="pulse"></span> Mesa de ayuda Hub Tech ULS</p>
+          <h1>Consultas claras.<br>Soporte que <span class="accent">sí avanza.</span></h1>
+          <p class="lead">Un solo lugar para reportar incidentes, pedir soporte y seguir cada caso hasta su solución. Con categorías, responsables, SLA y trazabilidad completa.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">
+              Crear una consulta
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+            <a class="btn btn-ghost" href="#servicios">Ver servicios</a>
+          </div>
+          <ul class="hero-points" aria-label="Características principales">
+            <li><strong>SLA P1–P4</strong><span>Tiempos objetivo</span></li>
+            <li><strong>L0–L5</strong><span>Escalamiento</span></li>
+            <li><strong>100%</strong><span>Trazabilidad</span></li>
+          </ul>
+        </div>
+
+        <div class="ticket-visual" aria-hidden="true">
+          <div class="ticket-card">
+            <div class="ticket-top">
+              <span class="ticket-id">TCK-2026-0148</span>
+              <span class="chip chip-red">En progreso</span>
+            </div>
+            <h3>Solicitud de acceso al repositorio</h3>
+            <p class="ticket-desc">Necesito acceso de lectura para el equipo de análisis del ODS.</p>
+            <div class="ticket-meta">
+              <div><span>Prioridad</span><strong>P3 · Media</strong></div>
+              <div><span>Unidad</span><strong>Repositorio</strong></div>
+              <div><span>SLA</span><strong>2 días hábiles</strong></div>
+            </div>
+            <div class="timeline">
+              <div class="timeline-item done"><span></span><div><strong>Consulta recibida</strong><small>Hoy · 09:14</small></div></div>
+              <div class="timeline-item active"><span></span><div><strong>En revisión técnica</strong><small>Hoy · 10:02</small></div></div>
+              <div class="timeline-item"><span></span><div><strong>Resolución y cierre</strong><small>Pendiente</small></div></div>
+            </div>
+          </div>
+          <div class="float-card float-card-top">
+            <span class="float-icon">SLA</span>
+            <div><strong>Dentro del plazo</strong><small>78% del tiempo consumido</small></div>
+          </div>
+          <div class="float-card float-card-bottom">
+            <span class="float-icon float-icon-black">KB</span>
+            <div><strong>Base de conocimiento</strong><small>Respuestas antes de abrir un caso</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-band" aria-hidden="true"></div>
+    </section>
+
+    <section class="logo-strip" aria-label="Tecnologías y marcos de trabajo">
+      <div class="container strip-inner">
+        <span>Construido sobre</span>
+        <strong>GLPI</strong>
+        <i></i>
+        <strong>ITIL</strong>
+        <i></i>
+        <strong>Open Source</strong>
+        <i></i>
+        <strong>SLA / OLA</strong>
+      </div>
+    </section>
+
+    <section class="section" id="servicios">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Servicios disponibles</p>
+          <h2>Elige el tipo de consulta</h2>
+          <p>Cada necesidad tiene su propio formulario y flujo. Así tu caso llega al equipo correcto desde el primer minuto.</p>
+        </div>
+
+        <div style="margin-bottom: 1.5rem">
+          <label for="help-search">Buscar un tipo de solicitud</label>
+          <input id="help-search" type="search" placeholder="Ej.: incidente, consulta o proyecto" style="display:block;width:100%;padding:.8rem;margin-top:.5rem;border:1px solid #ccc;border-radius:.5rem">
+          <p id="search-status" role="status" aria-live="polite"></p>
+        </div>
+        <div class="service-grid">
+          <a class="service-card" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">
+            <span class="service-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9Zm0 4.2a1.2 1.2 0 1 1-1.2 1.2A1.2 1.2 0 0 1 12 7.2Zm1.5 9.6h-3v-1.5h.8v-3h-.8v-1.5h2.2v4.5h.8Z" fill="currentColor"/></svg>
+            </span>
+            <h3>Consulta</h3>
+            <p>Dudas sobre servicios, accesos, procesos o funcionamiento de una plataforma.</p>
+            <span class="card-link">Abrir formulario <span aria-hidden="true">→</span></span>
+          </a>
+
+          <a class="service-card" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">
+            <span class="service-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 2 21h20L12 2Zm0 5.2 6.4 12.1H5.6L12 7.2Zm-1 3.3h2v5h-2v-5Zm0 6.2h2v2h-2v-2Z" fill="currentColor"/></svg>
+            </span>
+            <h3>Incidente</h3>
+            <p>Algo dejó de funcionar o está afectando tu trabajo ahora. Priorizamos por impacto.</p>
+            <span class="card-link">Reportar incidente <span aria-hidden="true">→</span></span>
+          </a>
+
+          <a class="service-card" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">
+            <span class="service-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 2h6v3h4v4h3v6h-3v4h-4v3H9v-3H5v-4H2V9h3V5h4V2Zm2 3v3H7v2H5v2h2v4h4v3h2v-3h4v-4h2V9h-2V7h-4V5h-2Z" fill="currentColor"/></svg>
+            </span>
+            <h3>Requerimiento</h3>
+            <p>Necesitas algo nuevo, un cambio o una configuración específica para tu equipo.</p>
+            <span class="card-link">Solicitar cambio <span aria-hidden="true">→</span></span>
+          </a>
+
+          <a class="service-card" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">
+            <span class="service-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Zm2 13.5V19h-4v-3.5a6 6 0 1 1 4 0ZM9 20h6v2H9v-2Z" fill="currentColor"/></svg>
+            </span>
+            <h3>Sugerencia</h3>
+            <p>Una idea para mejorar un servicio, una herramienta o la experiencia del Hub.</p>
+            <span class="card-link">Enviar sugerencia <span aria-hidden="true">→</span></span>
+          </a>
+
+          <a class="service-card" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">
+            <span class="service-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v4H4V4Zm0 6h16v10H4V10Zm2 2v6h12v-6H6Zm8 1h3v4h-3v-4Z" fill="currentColor"/></svg>
+            </span>
+            <h3>Solicitud de servicio</h3>
+            <p>Accesos, cuentas, herramientas o recursos disponibles en el catálogo del Hub.</p>
+            <span class="card-link">Ver catálogo <span aria-hidden="true">→</span></span>
+          </a>
+
+          <a class="service-card" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">
+            <span class="service-icon" aria-hidden="true">+</span>
+            <h3>Nuevo proyecto</h3>
+            <p>Presenta una iniciativa para evaluar su alcance, viabilidad y aprobación.</p>
+            <span class="card-link">Solicitar proyecto <span aria-hidden="true">→</span></span>
+          </a>
+          <a class="service-card" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">
+            <span class="service-icon" aria-hidden="true">↗</span>
+            <h3>Estado de proyecto</h3>
+            <p>Consulta avances, hitos y próximos pasos de un proyecto del Hub.</p>
+            <span class="card-link">Consultar avance <span aria-hidden="true">→</span></span>
+          </a>
+          <a class="service-card service-card-dark" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">
+            <span class="service-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5.2 3.4 9.9 8 11 4.6-1.1 8-5.8 8-11V5l-8-3Zm0 2.2 6 2.3V11c0 4-2.5 7.7-6 8.8C8.5 18.7 6 15 6 11V6.5l6-2.3Zm-1 3.3h2v5h-2v-5Zm0 6.2h2v2h-2v-2Z" fill="currentColor"/></svg>
+            </span>
+            <h3>Incidente de seguridad</h3>
+            <p>Phishing, accesos sospechosos o posible fuga de información. Se escala de inmediato.</p>
+            <span class="card-link">Reportar ahora <span aria-hidden="true">→</span></span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-soft" id="glpi">
+      <div class="container">
+        <div class="section-head split">
+          <div>
+            <p class="eyebrow">La plataforma</p>
+            <h2>Todo el ciclo del ticket,<br>en una sola herramienta</h2>
+          </div>
+          <p>Usamos GLPI, una plataforma open source de gestión de servicios ITIL. Sin formularios sueltos ni correos perdidos: cada caso tiene dueño, estado y historial.</p>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature">
+            <span class="feature-num">01</span>
+            <h3>Mesa de ayuda</h3>
+            <p>Tickets, seguimiento, adjuntos y conversación en una línea de tiempo compartida.</p>
+          </article>
+          <article class="feature">
+            <span class="feature-num">02</span>
+            <h3>SLA y OLA</h3>
+            <p>Tiempos objetivo, calendario operacional, vencimientos y escalamiento automático.</p>
+          </article>
+          <article class="feature">
+            <span class="feature-num">03</span>
+            <h3>Catálogo de servicios</h3>
+            <p>Formularios específicos para consultas, incidentes, requerimientos y seguridad.</p>
+          </article>
+          <article class="feature">
+            <span class="feature-num">04</span>
+            <h3>Base de conocimiento</h3>
+            <p>Respuestas y procedimientos revisados para resolver lo frecuente sin esperar.</p>
+          </article>
+          <article class="feature">
+            <span class="feature-num">05</span>
+            <h3>Proyectos y tareas</h3>
+            <p>Seguimiento de iniciativas, hitos y trabajo técnico vinculado a cada solicitud.</p>
+          </article>
+          <article class="feature">
+            <span class="feature-num">06</span>
+            <h3>Activos y CMDB</h3>
+            <p>Contexto de equipos, servicios y dependencias para diagnosticar mejor y más rápido.</p>
+          </article>
+          <article class="feature">
+            <span class="feature-num">07</span>
+            <h3>Reportes e indicadores</h3>
+            <p>Backlog, tiempos de respuesta, cumplimiento de SLA, reaperturas y satisfacción.</p>
+          </article>
+          <article class="feature">
+            <span class="feature-num">08</span>
+            <h3>Seguridad y roles</h3>
+            <p>MFA, permisos por perfil y entidad, registro de actividad y mínimo privilegio.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="como-funciona">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Cómo funciona</p>
+          <h2>Tres pasos, cero incertidumbre</h2>
+        </div>
+        <ol class="steps">
+          <li>
+            <span class="step-num">1</span>
+            <h3>Ingresa con tu cuenta</h3>
+            <p>Accede al portal del Hub Tech ULS. Si no tienes cuenta, solicítala al equipo de la mesa de ayuda.</p>
+          </li>
+          <li>
+            <span class="step-num">2</span>
+            <h3>Elige el formulario correcto</h3>
+            <p>Selecciona consulta, incidente, requerimiento o seguridad. Completa los datos y adjunta evidencia.</p>
+          </li>
+          <li>
+            <span class="step-num">3</span>
+            <h3>Sigue tu caso</h3>
+            <p>Recibirás un número de ticket. Revisa avances, responde al equipo y valida la solución.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="security-band">
+      <div class="container security-grid">
+        <div>
+          <p class="eyebrow eyebrow-light">Gobierno y confianza</p>
+          <h2>Un sistema pensado para datos sensibles</h2>
+          <p class="security-copy">La mesa de ayuda puede recibir información personal y antecedentes institucionales. Por eso aplicamos mínimo privilegio, separación por entidades y registro de cada acción.</p>
+        </div>
+        <ul class="security-list">
+          <li><strong>Acceso por roles</strong><span>Cliente, mesa L1, técnico L2, supervisor L3 y administración.</span></li>
+          <li><strong>MFA disponible</strong><span>Segundo factor para cuentas privilegiadas.</span></li>
+          <li><strong>Historial completo</strong><span>Quién cambió qué, cuándo y por qué.</span></li>
+          <li><strong>Respaldo y continuidad</strong><span>Base de datos y archivos con política de respaldo.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section cta-section">
+      <div class="container cta-box">
+        <div>
+          <p class="eyebrow eyebrow-light">¿Listo para comenzar?</p>
+          <h2>Tu próxima consulta<br>empieza aquí.</h2>
+        </div>
+        <div class="cta-actions">
+          <a class="btn btn-white" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">Crear consulta</a>
+          <a class="btn btn-outline-light" href="consultas.html">Ver guía de consultas</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <img src="assets/logo.svg" alt="Hub Tech ULS" width="252" height="56">
+        <p>Hub Tech ULS · eTicket<br>Universidad estatal chilena</p>
+      </div>
+      <div class="footer-col">
+        <h3>Consultas</h3>
+        <a data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">Nueva consulta</a>
+        <a data-glpi-path="/Helpdesk" href="http://localhost:8081/Helpdesk">Mis tickets</a>
+        <a data-glpi-path="/front/helpdesk.faq.php" href="http://localhost:8081/front/helpdesk.faq.php">Preguntas frecuentes</a>
+      </div>
+      <div class="footer-col">
+        <h3>Plataforma</h3>
+        <a href="#glpi">Qué ofrece GLPI</a>
+        <a href="#servicios">Tipos de solicitud</a>
+        <a href="#como-funciona">Cómo funciona</a>
+      </div>
+      <div class="footer-col">
+        <h3>Soporte</h3>
+        <a href="consultas.html">Guía de consultas</a>
+        <a href="consultas.html#tiempos">Tiempos objetivo</a>
+        <a href="consultas.html#seguridad">Reportar incidente de seguridad</a>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <span>© <span data-year>2026</span> Hub Tech ULS. Proyecto eTicket.</span>
+      <span>GLPI es software libre distribuido bajo licencia GPLv3.</span>
+    </div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "baseline": "hub-2026-01",
+  "root": "Hub Tech ULS",
+  "units": {
+    "Software Factory Lab": ["Aplicaciones", "Base de Datos", "Integraciones", "DevOps", "QA", "UX/UI", "Proyecto"],
+    "Observatorio de Datos Sustentables": ["Datos", "Calidad", "Indicadores", "Reportería"],
+    "Repositorio de Datos": ["Acceso", "Publicación", "Ingesta", "Calidad"],
+    "IoT Lab": ["Dispositivo", "Sensor", "Conectividad", "Plataforma"],
+    "IA Lab": ["Modelo", "Inferencia", "Datos", "Integración"],
+    "Security Lab": ["Malware", "Phishing", "Acceso", "Vulnerabilidad", "Fuga de información", "Evento sospechoso"]
+  },
+  "groups": ["HD-L1-MESA", "SFL-L2", "SFL-QA", "SFL-PM", "ODS-L2", "REPOSITORIO-L2", "IOT-L2", "IA-L2", "SECURITY-L2", "PROFESORES-L3", "TECHLEAD-L3", "CIO-L4", "CE-L5"],
+  "unit_groups": ["SFL-L2", "ODS-L2", "REPOSITORIO-L2", "IOT-L2", "IA-L2", "SECURITY-L2"],
+  "services": [
+    {"code":"F01", "name":"Reportar incidente", "type":1, "category":"Incidente"},
+    {"code":"F02", "name":"Solicitar servicio", "type":2, "category":"Servicio"},
+    {"code":"F03", "name":"Solicitar requerimiento", "type":2, "category":"Requerimiento"},
+    {"code":"F04", "name":"Realizar consulta", "type":2, "category":"Consulta"},
+    {"code":"F05", "name":"Enviar sugerencia", "type":2, "category":"Sugerencia"},
+    {"code":"F06", "name":"Solicitar nuevo proyecto", "type":2, "category":"Nuevo proyecto"},
+    {"code":"F07", "name":"Consultar estado de proyecto", "type":2, "category":"Seguimiento de proyecto"},
+    {"code":"F08", "name":"Reportar incidente de seguridad", "type":1, "category":"Seguridad"}
+  ],
+  "pending_reasons": ["Esperando cliente", "Esperando proveedor", "Esperando aprobación", "Esperando dependencia técnica", "Esperando ventana de mantenimiento", "Esperando información", "Esperando decisión institucional"],
+  "sla": [
+    {"code":"P1", "priorities":[6], "tto_minutes":30, "ttr_minutes":240, "business_hours":false},
+    {"code":"P2", "priorities":[5,4], "tto_minutes":120, "ttr_minutes":480, "business_hours":true},
+    {"code":"P3", "priorities":[3], "tto_minutes":240, "ttr_minutes":1200, "business_hours":true},
+    {"code":"P4", "priorities":[2,1], "tto_minutes":600, "ttr_minutes":3000, "business_hours":true}
+  ]
+}

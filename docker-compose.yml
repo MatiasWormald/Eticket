@@ -1,0 +1,112 @@
+name: eticket-hubtechuls
+
+services:
+  db:
+    image: mariadb:11.4@sha256:250e1609e93c0e6aecf64bfbab2d84d5e89d2481540fe77447ff6c855c3b1873
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${GLPI_DB_NAME:-glpi}
+      MARIADB_USER: ${GLPI_DB_USER:-glpi}
+      MARIADB_PASSWORD: ${GLPI_DB_PASSWORD:?Ejecuta scripts/init.ps1}
+      MARIADB_ROOT_PASSWORD: ${GLPI_DB_ROOT_PASSWORD:?Ejecuta scripts/init.ps1}
+      TZ: America/Santiago
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=256M
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  glpi:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        GLPI_TARBALL: glpi-12.0.0.tgz
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${GLPI_PORT:-8081}:80"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${GLPI_DB_NAME:-glpi}
+      DB_USER: ${GLPI_DB_USER:-glpi}
+      DB_PASSWORD: ${GLPI_DB_PASSWORD:?Ejecuta scripts/init.ps1}
+      GLPI_LANGUAGE: ${GLPI_LANGUAGE:-es_CL}
+      GLPI_ADMIN_USER: ${GLPI_ADMIN_USER:-admin}
+      GLPI_ADMIN_PASSWORD: ${GLPI_ADMIN_PASSWORD:?Ejecuta scripts/init.ps1}
+      GLPI_CONSULTA_USER: ${GLPI_CONSULTA_USER:-consulta}
+      GLPI_CONSULTA_PASSWORD: ${GLPI_CONSULTA_PASSWORD:-consulta}
+      TZ: America/Santiago
+    volumes:
+      - glpi_config:/var/www/html/config
+      - glpi_files:/var/www/html/files
+      - glpi_marketplace:/var/www/html/marketplace
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /var/www/html/files/_eticket-ready && curl -fsS http://localhost/ >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 120s
+
+  cron:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        GLPI_TARBALL: glpi-12.0.0.tgz
+    restart: unless-stopped
+    depends_on:
+      glpi:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "while true; do su -s /bin/sh www-data -c 'php /var/www/html/front/cron.php' || echo 'ERROR: cron GLPI falló'; sleep 60; done"
+    environment:
+      TZ: America/Santiago
+    volumes:
+      - glpi_config:/var/www/html/config
+      - glpi_files:/var/www/html/files
+      - glpi_marketplace:/var/www/html/marketplace
+
+  api:
+    profiles: ["experimental-api"]
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - glpi
+    ports:
+      - "127.0.0.1:${API_PORT:-8082}:80"
+    environment:
+      GLPI_INTERNAL_URL: http://glpi
+      GLPI_API_USER: ${GLPI_API_USER:-}
+      GLPI_API_PASS: ${GLPI_API_PASS:-}
+      GLPI_APP_TOKEN: ""
+      API_ALLOW_ORIGIN: http://localhost:${SITE_PORT:-8080}
+      TZ: America/Santiago
+
+  site:
+    image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${SITE_PORT:-8080}:80"
+    volumes:
+      - ./site:/usr/share/nginx/html:ro
+      - ./docker/site.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  db_data:
+  glpi_config:
+  glpi_files:
+  glpi_marketplace:

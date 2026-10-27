@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Centro de consultas | Hub Tech ULS</title>
+  <meta name="description" content="Guía y acceso al centro de consultas del Hub Tech ULS. Crea, revisa y sigue tus tickets en GLPI.">
+  <meta name="theme-color" content="#c8102e">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="Hub Tech ULS - Inicio">
+        <img src="assets/logo.svg" alt="Hub Tech ULS" width="252" height="56">
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
+        <span class="sr-only">Abrir menú</span>
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="main-nav" id="main-nav" aria-label="Navegación principal">
+        <a href="index.html#servicios">Servicios</a>
+        <a href="index.html#glpi">Plataforma</a>
+        <a href="index.html#como-funciona">Cómo funciona</a>
+        <a class="is-active" href="consultas.html">Consultas</a>
+        <a class="btn btn-sm btn-primary" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">Crear consulta</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenido">
+    <section class="page-hero">
+      <div class="container page-hero-grid">
+        <div>
+          <p class="eyebrow"><span class="pulse"></span> Portal de atención</p>
+          <h1>Centro de <span class="accent">consultas</span></h1>
+          <p class="lead">Crea una solicitud, revisa el estado de tus casos y conversa con el equipo responsable. Todo queda registrado en tu historial.</p>
+        </div>
+        <div class="page-hero-actions">
+          <a class="action-card action-card-primary" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">
+            <span class="action-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z" fill="currentColor"/></svg>
+            </span>
+            <div><strong>Nueva consulta</strong><small>Crear desde el portal Tech Hub</small></div>
+            <span class="action-arrow" aria-hidden="true">→</span>
+          </a>
+          <a class="action-card" data-glpi-path="/front/ticket.php" href="http://localhost:8081/front/ticket.php">
+            <span class="action-icon action-icon-dark">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4V4Zm2 2v12h12V6H6Zm2 2h8v2H8V8Zm0 4h8v2H8v-2Zm0 4h5v2H8v-2Z" fill="currentColor"/></svg>
+            </span>
+            <div><strong>Mis tickets</strong><small>Revisar casos y respuestas</small></div>
+            <span class="action-arrow" aria-hidden="true">→</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-tight">
+      <div class="container">
+        <div class="quick-grid">
+          <a class="quick-card" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">
+            <span class="quick-tag">Incidente</span>
+            <h3>Algo no funciona</h3>
+            <p>Servicio caído, error, lentitud o pérdida de acceso.</p>
+            <span class="card-link">Reportar <span aria-hidden="true">→</span></span>
+          </a>
+          <a class="quick-card" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">
+            <span class="quick-tag">Consulta</span>
+            <h3>Tengo una duda</h3>
+            <p>Información sobre un servicio, proceso o herramienta.</p>
+            <span class="card-link">Preguntar <span aria-hidden="true">→</span></span>
+          </a>
+          <a class="quick-card" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">
+            <span class="quick-tag">Solicitud</span>
+            <h3>Necesito un acceso</h3>
+            <p>Cuentas, permisos, recursos o configuración.</p>
+            <span class="card-link">Solicitar <span aria-hidden="true">→</span></span>
+          </a>
+          <a class="quick-card quick-card-security" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">
+            <span class="quick-tag">Seguridad</span>
+            <h3>Reportar un incidente</h3>
+            <p>Phishing, accesos sospechosos o fuga de información.</p>
+            <span class="card-link">Reportar ahora <span aria-hidden="true">→</span></span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-soft">
+      <div class="container two-col">
+        <div>
+          <p class="eyebrow">Antes de enviar</p>
+          <h2>Ayúdanos a resolver más rápido</h2>
+          <p class="muted">Un ticket bien descrito evita idas y vueltas. Incluye sólo la información necesaria y evita datos sensibles innecesarios.</p>
+          <ul class="check-list">
+            <li><strong>Describe qué ocurre</strong><span>Qué esperabas que pasara y qué pasó realmente.</span></li>
+            <li><strong>Indica el impacto</strong><span>A quién afecta y si impide trabajar por completo.</span></li>
+            <li><strong>Adjunta evidencia</strong><span>Capturas, mensajes de error o pasos para reproducirlo.</span></li>
+            <li><strong>No compartas secretos</strong><span>Nunca incluyas contraseñas, tokens ni claves en el ticket.</span></li>
+          </ul>
+        </div>
+        <aside class="info-panel" id="tiempos">
+          <h3>Tiempos objetivo del piloto</h3>
+          <p class="muted">Son objetivos del piloto, sujetos a validación. P2–P4 se calculan en horario hábil; P1 requiere confirmar la disponibilidad del equipo.</p>
+          <table class="sla-table">
+            <thead>
+              <tr><th>Prioridad</th><th>Respuesta</th><th>Resolución</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="prio prio-p1">P1</span> Crítica</td><td>30 min</td><td>4 h</td></tr>
+              <tr><td><span class="prio prio-p2">P2</span> Alta</td><td>2 h</td><td>8 h</td></tr>
+              <tr><td><span class="prio prio-p3">P3</span> Media</td><td>4 h</td><td>2 días</td></tr>
+              <tr><td><span class="prio prio-p4">P4</span> Baja</td><td>1 día</td><td>5 días</td></tr>
+            </tbody>
+          </table>
+          <p class="note">Un incidente de ciberseguridad con posible efecto significativo se rige además por el procedimiento institucional y los plazos legales aplicables.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container two-col">
+        <div>
+          <p class="eyebrow">Qué puedes hacer</p>
+          <h2>Tu cuenta, tus casos</h2>
+          <p class="muted">El portal está disponible para clientes internos y externos autorizados. Cada usuario ve únicamente la información que le corresponde.</p>
+          <div class="mini-grid">
+            <div class="mini-card"><strong>Crear</strong><span>Consultas, incidentes y requerimientos.</span></div>
+            <div class="mini-card"><strong>Seguir</strong><span>Estado, responsables y conversación.</span></div>
+            <div class="mini-card"><strong>Responder</strong><span>Agregar antecedentes y validar soluciones.</span></div>
+            <div class="mini-card"><strong>Consultar</strong><span>Base de conocimiento y preguntas frecuentes.</span></div>
+          </div>
+          <div class="inline-actions">
+            <a class="btn btn-primary" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">Crear ticket</a>
+            <a class="btn btn-ghost" data-glpi-path="/front/helpdesk.faq.php" href="http://localhost:8081/front/helpdesk.faq.php">Ver preguntas frecuentes</a>
+          </div>
+        </div>
+
+        <div class="faq" aria-labelledby="faq-title">
+          <h2 id="faq-title">Preguntas frecuentes</h2>
+          <details>
+            <summary>¿Necesito una cuenta para crear una consulta?</summary>
+            <p>Sí. El portal usa autenticación institucional. Si aún no tienes acceso, solicita la creación de tu cuenta a la mesa de ayuda.</p>
+          </details>
+          <details>
+            <summary>¿Cómo sigo el estado de mi ticket?</summary>
+            <p>Ingresa a “Mis tickets”. Ahí verás el estado, la prioridad, el responsable y la línea de tiempo de cada caso.</p>
+          </details>
+          <details>
+            <summary>¿Puedo adjuntar archivos?</summary>
+            <p>Sí, dentro de los límites definidos por la plataforma. Evita adjuntar bases de datos completas, credenciales o información que no sea necesaria para el caso.</p>
+          </details>
+          <details>
+            <summary>¿Qué hago ante un posible incidente de seguridad?</summary>
+            <p>No esperes. Crea el ticket en la categoría de seguridad o avisa de inmediato al Security Lab. No reenvíes correos sospechosos ni compartas credenciales.</p>
+          </details>
+          <details>
+            <summary>¿Puedo reabrir un ticket cerrado?</summary>
+            <p>Sí, si el problema persiste o reaparece dentro del período definido. Indica qué cambió y adjunta la evidencia disponible.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="security-band" id="seguridad">
+      <div class="container security-grid">
+        <div>
+          <p class="eyebrow eyebrow-light">Seguridad</p>
+          <h2>Reportar a tiempo cambia el resultado</h2>
+          <p class="security-copy">Phishing, accesos no reconocidos, malware o posible filtración de información deben escalarse de inmediato. El equipo de seguridad evalúa el caso y activa el procedimiento correspondiente.</p>
+        </div>
+        <div class="security-cta">
+          <a class="btn btn-white" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">Reportar incidente de seguridad</a>
+          <p>Si el incidente está ocurriendo ahora y afecta un servicio crítico, informa también a tu supervisor o al CIO del Hub.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <img src="assets/logo.svg" alt="Hub Tech ULS" width="252" height="56">
+        <p>Hub Tech ULS · eTicket<br>Universidad estatal chilena</p>
+      </div>
+      <div class="footer-col">
+        <h3>Consultas</h3>
+        <a data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">Nueva consulta</a>
+        <a data-glpi-path="/Helpdesk" href="http://localhost:8081/Helpdesk">Mi inicio</a>
+        <a data-glpi-path="/front/helpdesk.faq.php" href="http://localhost:8081/front/helpdesk.faq.php">Preguntas frecuentes</a>
+      </div>
+      <div class="footer-col">
+        <h3>Plataforma</h3>
+        <a href="index.html#glpi">Qué ofrece GLPI</a>
+        <a href="index.html#servicios">Tipos de solicitud</a>
+        <a href="index.html#como-funciona">Cómo funciona</a>
+      </div>
+      <div class="footer-col">
+        <h3>Soporte</h3>
+        <a href="consultas.html#tiempos">Tiempos objetivo</a>
+        <a href="consultas.html#seguridad">Incidentes de seguridad</a>
+        <a data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">Abrir ticket</a>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <span>© <span data-year>2026</span> Hub Tech ULS. Proyecto eTicket.</span>
+      <span>GLPI es software libre distribuido bajo licencia GPLv3.</span>
+    </div>
+  </footer>
+
+  <script src="config.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

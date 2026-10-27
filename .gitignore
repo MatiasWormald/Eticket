@@ -1,0 +1,12 @@
+.env
+*.log
+docker-data/
+glpi/
+glpi-*.tgz
+Informacion del proyecto/
+backups/
+artifacts/
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
