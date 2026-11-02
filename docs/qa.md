@@ -1,5 +1,13 @@
 # Aceptación del piloto
 
+## Portal propio eTicket
+
+La interfaz propia se publica en el puerto 8080 y usa el plugin `etickethub` como backend. `node scripts/test-portal.cjs` comprueba sesiones HTTP individuales, CSRF, aislamiento de clientes, permisos de agente/gestor, notas y adjuntos privados, descargas, edición, solución, reapertura, cierre y papelera. Los tickets de prueba son sintéticos y se envían a papelera al finalizar. No se purgan.
+
+`node scripts/test-portal-browser.cjs` verifica el recorrido en Chrome y capturas en escritorio/móvil; requiere la dependencia opcional descrita en README. Estas comprobaciones complementan la suite nativa de GLPI. La API experimental del directorio `api/` sigue deshabilitada. El portal limita adjuntos a 10 MB y a PDF/PNG/JPG/TXT, aunque el límite del GLPI nativo es mayor.
+
+## Validación institucional
+
 Configuración de laboratorio, sin aprobación de producción. `scripts/check.ps1` verifica la base técnica. Para cada prueba institucional registrar fecha, versión, ejecutor, resultado y evidencia sin datos reales. Pendiente no significa aprobado.
 
 La suite `scripts/check.ps1 -Integration` valida transaccionalmente los ocho destinos de formularios, contenido de respuestas, tipos, grupos, SLA de todas las prioridades y visibilidad de tickets para dos clientes y un alumno. Revierte usuarios/tickets sintéticos. Es evidencia técnica de laboratorio; no sustituye pruebas de adjuntos, sesiones HTTP, MFA, correo ni UAT institucional.

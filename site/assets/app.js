@@ -3,10 +3,22 @@
 
   var config = window.ETICKET_CONFIG || {};
   var glpiUrl = (config.glpiUrl || "").replace(/\/+$/, "");
+  var origin = new URLSearchParams(window.location.search).get('origen');
+  try {
+    if (origin === 'A' || origin === 'B') sessionStorage.setItem('eticket-origin', origin);
+    origin = sessionStorage.getItem('eticket-origin');
+  } catch (_) { /* La navegación también funciona sin almacenamiento. */ }
 
   if (glpiUrl) {
     document.querySelectorAll("[data-glpi-path]").forEach(function (link) {
-      link.setAttribute("href", glpiUrl + link.getAttribute("data-glpi-path"));
+      var target = new URL(glpiUrl + link.getAttribute("data-glpi-path"));
+      var path = link.getAttribute("data-glpi-path");
+      if (path === '/ServiceCatalog' || path === '/Helpdesk' || path === '/front/ticket.php') {
+        target = new URL('index.html', window.location.href);
+        target.hash = path === '/ServiceCatalog' ? '#/nueva' : '#/tickets';
+      }
+      if (origin === 'A' || origin === 'B') target.searchParams.set('origen', origin);
+      link.setAttribute("href", target.href);
     });
   }
 

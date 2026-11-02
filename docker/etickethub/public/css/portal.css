@@ -1,0 +1,13 @@
+#eticket-navigation {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .65rem 1.3rem;
+  padding: .9rem clamp(1rem, 3vw, 2.5rem); background: #111827;
+  color: white; border-bottom: 4px solid #c8102e; position: relative; z-index: 1031;
+}
+#eticket-navigation a { color: #fff; text-decoration: none; padding: .35rem .2rem; }
+#eticket-navigation a:hover { text-decoration: underline; }
+#eticket-navigation a:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+#eticket-navigation .eticket-brand { font-weight: 800; margin-right: auto; font-size: 1.15rem; }
+@media (max-width: 600px) {
+  #eticket-navigation { gap: .35rem 1rem; font-size: .9rem; }
+  #eticket-navigation .eticket-brand { flex-basis: 100%; }
+}

@@ -46,6 +46,9 @@ services:
       GLPI_ADMIN_PASSWORD: ${GLPI_ADMIN_PASSWORD:?Ejecuta scripts/init.ps1}
       GLPI_CONSULTA_USER: ${GLPI_CONSULTA_USER:-consulta}
       GLPI_CONSULTA_PASSWORD: ${GLPI_CONSULTA_PASSWORD:-consulta}
+      ETICKET_SITE_URL: ${ETICKET_SITE_URL:-http://localhost:8080}
+      ETICKET_ORIGIN_A_URL: ${ETICKET_ORIGIN_A_URL:-}
+      ETICKET_ORIGIN_B_URL: ${ETICKET_ORIGIN_B_URL:-}
       TZ: America/Santiago
     volumes:
       - glpi_config:/var/www/html/config

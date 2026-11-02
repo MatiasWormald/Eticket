@@ -10,3 +10,15 @@ artifacts/
 !.env.example
 .DS_Store
 Thumbs.db
+
+# Dependencias y resultados locales de pruebas
+node_modules/
+playwright-report/
+test-results/
+.pytest_cache/
+__pycache__/
+
+# Credenciales y claves locales
+.aws/
+*.pem
+*.key

@@ -12,7 +12,7 @@ $checks = [
     'baseline registrada' => is_file(GLPI_VAR_DIR . '/_eticket-baseline.json'),
     'ocho SLA' => count((new SLA())->find(['name' => ['LIKE', 'ETICKET %']])) === 8,
     'trece grupos operacionales' => count((new Group())->find(['name' => ['HD-L1-MESA','SFL-L2','SFL-QA','SFL-PM','ODS-L2','REPOSITORIO-L2','IOT-L2','IA-L2','SECURITY-L2','PROFESORES-L3','TECHLEAD-L3','CIO-L4','CE-L5']])) === 13,
-    'once perfiles institucionales' => count((new Profile())->find(['name' => ['LIKE', 'ETICKET %']])) === 11,
+    'perfiles institucionales y portal' => count((new Profile())->find(['name' => ['LIKE', 'ETICKET %']])) >= 13,
     'sin cuentas demo activas' => count((new User())->find(['name' => ['glpi','tech','normal','post-only'], 'is_active' => 1])) === 0,
     'sin entidades vacías' => count((new Entity())->find(['id' => ['>', 0], 'name' => ''])) === 0,
 ];

@@ -1,98 +1,96 @@
-# eTicket · Hub Tech ULS
+# eTicket · Tech Hub ULS
 
-Entorno de desarrollo compartible: sitio de **nivel 1**, GLPI **12.0.0 estable** y MariaDB. El sitio informa y deriva al portal autenticado de GLPI. Los prototipos de API de niveles 2/3 están bloqueados.
+Portal propio de soporte con la estética del Tech Hub, GLPI 12.0.0 y MariaDB. Los clientes crean y siguen sus solicitudes sin salir de eTicket. El equipo puede atender desde el portal o desde GLPI.
 
 ## Iniciar
 
-Requisitos: Git, PowerShell y Docker Desktop con contenedores Linux en ejecución. Puertos 8080 y 8081 disponibles.
+Requisitos: Docker Desktop con contenedores Linux y PowerShell. Puertos 8080 y 8081 disponibles.
 
 ```powershell
-git clone https://github.com/MatiasWormald/Eticket.git
-cd Eticket
 powershell -ExecutionPolicy Bypass -File scripts/init.ps1
 docker compose up -d --build --wait
-powershell -ExecutionPolicy Bypass -File scripts/check.ps1
-# Opcional: formularios, prioridades y permisos con datos sintéticos revertidos
-powershell -ExecutionPolicy Bypass -File scripts/check.ps1 -Integration
-```
-
-`init.ps1` genera claves aleatorias si no existe `.env`, descarga el paquete oficial fijado y comprueba SHA-256. Conserva un `.env` existente. Cada integrante tiene sus propios secretos y volúmenes.
-
-| Servicio | Dirección |
-|---|---|
-| Sitio y centro de consultas | http://localhost:8080 |
-| GLPI | http://localhost:8081 |
-| MariaDB | Solo red Docker |
-
-Administrador: `GLPI_ADMIN_USER` (por defecto `admin`) y `GLPI_ADMIN_PASSWORD` de `.env`. Cambiar `.env` no cambia contraseñas de una base ya instalada: hacerlo desde GLPI. No se crea una cuenta cliente compartida; dar de alta usuarios nominativos.
-
-## Demostración en español
-
-La interfaz usa `es_MX` (español con mayor cobertura en el paquete incluido), conservando la zona horaria `America/Santiago`. El idioma global se aplica también a bases ya instaladas; las preferencias explícitas de otras cuentas se conservan. Después de cambiar idioma, cerrar sesión y volver a entrar.
-
-Para preparar ejemplos ficticios, ejecutar una vez:
-
-```powershell
 powershell -ExecutionPolicy Bypass -File scripts/demo.ps1
 ```
 
-Esto crea `cliente.demo` con perfil de cliente externo, sin permisos administrativos, y tres tickets `[DEMO]` en español: solicitud de acceso, incidente de descarga y consulta resuelta, con seguimientos públicos. Ingresar a GLPI con esa cuenta y abrir **Mis tickets**. La contraseña se genera en `.env.demo`, excluido de Git. No usar una contraseña institucional para la demostración.
+- Portal de clientes y atención: http://localhost:8080
+- Administración nativa de GLPI: http://localhost:8081
+- Guía para clientes: http://localhost:8080/guia.html
 
-Repetir el comando conserva los tickets existentes y sus cambios; no duplica ejemplos ni restablece contraseñas. No se cargan ejemplos automáticamente al instalar. Si ya existe `cliente.demo` ajeno a esta demostración, el script se detiene sin modificarlo. Para dejar de usar la demostración, desactivar su cuenta desde GLPI; no purgar datos sin revisión.
+`init.ps1` conserva un `.env` existente y verifica el paquete oficial por SHA-256. Los datos persisten en volúmenes Docker. No uses `docker compose down -v` para reiniciar: elimina los datos.
 
-## Configuración
+## Roles y usuarios de prueba
 
-La fuente editable es [config/hub.json](config/hub.json). [docker/provision-hub.php](docker/provision-hub.php) utiliza las clases nativas de GLPI, sin modificar su núcleo, para crear:
+| Usuario | Perfil | Contraseña en `.env.demo` |
+|---|---|---|
+| cliente.demo | Crear y responder sus propias solicitudes | GLPI_DEMO_PASSWORD |
+| agente.demo | Leer y responder tickets de sus entidades autorizadas, incluyendo notas internas | GLPI_DEMO_AGENT_PASSWORD |
+| gestor.demo | Administrador general: tickets, campos, formularios, usuarios y perfiles | GLPI_DEMO_MANAGER_PASSWORD |
+| cliente2.demo | Segundo cliente para comprobar aislamiento | GLPI_DEMO_OTHER_PASSWORD |
 
-- Seis entidades, trece grupos operacionales L1–L5 y categorías por unidad.
-- Once perfiles institucionales; clientes con tickets propios y alumnos con tickets asignados.
-- Ocho formularios autenticados F01–F08 y sus destinos; seguridad deriva a Security Lab.
-- Calendario lunes–viernes 08:00–18:00, SLA TTO/TTR P1–P4 y escalamiento.
-- Razones de pendiente; base de conocimiento pendiente de contenido institucional revisado.
+Las claves se generan localmente; `.env.demo` está excluido de Git. El script conserva cuentas y claves existentes, y rechaza cuentas homónimas ajenas a la demostración. Si se cambió una contraseña desde GLPI, el archivo puede dejar de coincidir. No compartir cuentas de prueba en un entorno real.
 
-Los registros funcionales existentes se conservan. En cada inicio se refuerzan el tema corporativo, las cuentas demo inactivas, el cierre de API, el acceso al catálogo y el modo CLI de las tareas críticas. Cambiar JSON no migra valores ya creados: requiere un cambio explícito probado. El arranque no migra automáticamente versiones de base de datos.
+Administrador: `GLPI_ADMIN_USER` y `GLPI_ADMIN_PASSWORD` de `.env`. Cambiar ese archivo no modifica contraseñas de una base instalada.
 
-Detalles: [configuración y pendientes](docs/configuracion.md), [pruebas](docs/qa.md), [operación y recuperación](docs/operacion.md).
+Hay tres roles de uso: cliente, agente de atención y gestor administrador. El agente consulta y responde; el gestor tiene los derechos del Super-Admin de GLPI, incluida la creación de perfiles y usuarios. El gestor puede editar la estructura del formulario desde **Administración**, y abrir GLPI para la configuración completa. `tecnico.demo` está retirado, desactivado y en papelera; no se vuelve a crear. Los derechos se comprueban en el servidor.
 
-## Trabajo en equipo
+## Qué funciona en el portal
+
+Inicio de sesión individual, ocho tipos de servicio, creación, búsqueda y paginación de solicitudes, estados en español, conversación pública y notas internas, adjuntos y descargas autorizadas, edición según permisos, propuesta de solución, aceptación o rechazo por el cliente y papelera para el gestor.
+
+Se permiten adjuntos PDF, PNG, JPG y TXT de hasta 10 MB. No hay actualización en tiempo real: el botón **Actualizar** consulta los últimos avances. El correo saliente no está configurado.
+
+La autenticación usa las cuentas y sesiones nativas de GLPI. Para cuentas con MFA, utilizar primero el acceso institucional de GLPI desde la pantalla de ingreso y volver al portal. La experiencia de doble factor dentro de la interfaz propia queda pendiente de implementación y validación.
+
+## Arquitectura
+
+`Navegador → Nginx /api → plugin etickethub → clases, permisos y almacenamiento de GLPI`.
+
+El plugin local implementa un backend JSON con sesión individual, protección CSRF, comprobación de derechos sobre cada ticket y filtros nativos de privacidad de documentos. No utiliza una cuenta de servicio compartida, no expone claves al navegador y no duplica los tickets en otra base. Está fijado a GLPI 12.0.x; al actualizar GLPI se deben repetir las pruebas.
+
+Las API públicas REST heredada/HL de GLPI permanecen deshabilitadas. El directorio `api/` es un prototipo antiguo bloqueado, fuera del stack por defecto: no es el backend de este portal. No iniciar el perfil `experimental-api` para usar eTicket.
+
+## Integrar las páginas A y B
+
+Los sitios externos pueden enlazar directamente a:
+
+- `http://localhost:8080/?origen=A#/nueva`
+- `http://localhost:8080/?origen=B#/tickets`
+
+Completar `ETICKET_ORIGIN_A_URL` y `ETICKET_ORIGIN_B_URL` en `.env` cuando estén disponibles. `ETICKET_SITE_URL` es el destino de eTicket. Ejecutar `docker compose up -d --build --wait` después. Si no hay destino configurado, el regreso lleva a eTicket. Solo se admiten A/B, no URLs arbitrarias enviadas por el cliente.
+
+## Comprobaciones
 
 ```powershell
-git switch -c feat/descripcion-del-cambio
-# Editar y verificar
-powershell -ExecutionPolicy Bypass -File scripts/check.ps1
-git add README.md config docker scripts docs site api .github .gitignore .gitattributes .dockerignore docker-compose.yml .env.example
-git diff --cached --stat
-git commit -m "Configura baseline GLPI para Hub Tech ULS"
-git push -u origin feat/descripcion-del-cambio
+powershell -ExecutionPolicy Bypass -File scripts/check.ps1 -Integration
+# Node 22+; crea tickets sintéticos y los envía a la papelera al terminar
+node scripts/test-portal.cjs
+node scripts/test-portal-navigation.cjs
+# Solo desarrollo: modifica temporalmente y restaura la estructura
+node scripts/test-portal-admin.cjs
 ```
 
-Repositorio del equipo: [MatiasWormald/Eticket](https://github.com/MatiasWormald/Eticket). Es público; solo contiene código y configuración reproducible. Trabajar en ramas y revisar cambios mediante pull requests.
-
-Git excluye `.env`, respaldos, documentos confidenciales de origen, `glpi/` extraído y el paquete descargado. El repositorio conserva configuración, scripts, sitio y documentación técnica. No compartir dumps productivos para trabajar; utilizar datos sintéticos.
-
-En Linux/macOS puede ejecutarse `scripts/init.ps1` con `pwsh`. Alternativa: copiar `.env.example`, reemplazar las tres contraseñas y descargar/verificar el paquete indicado en ese script antes de ejecutar Compose.
-
-## Operación
+Para pruebas reales de navegador con Chrome instalado:
 
 ```powershell
-docker compose ps
+npm.cmd install --prefix artifacts/portal-qa --no-audit --no-fund playwright-core
+node scripts/test-portal-browser.cjs
+```
+
+`CHROME_PATH` permite indicar otra ruta de Chrome/Chromium. Las capturas quedan en `artifacts/portal-qa`, excluido de Git. Las pruebas HTTP comprueban acceso entre clientes, permisos de agente/gestor, notas y adjuntos privados, solución, reapertura, cierre y papelera.
+
+## Desarrollo y operación
+
+El frontend está en `site/index.html` y `site/assets/portal.*`; no requiere compilación. El backend está en `docker/etickethub/inc/Portal.php`. Los cambios del plugin requieren reconstruir la imagen.
+
+```powershell
+docker compose up -d --build --wait
 docker compose logs --tail 100 glpi cron
 docker compose down
-docker compose up -d --wait
-# Después de editar config/hub.json o docker/
-docker compose up -d --build --wait
-# Respaldo consistente: detiene brevemente GLPI
 powershell -ExecutionPolicy Bypass -File scripts/backup.ps1
 ```
 
-Los datos persisten en los volúmenes `db_data`, `glpi_config`, `glpi_files` y `glpi_marketplace`. **`docker compose down -v` borra los datos** y no es un procedimiento de actualización. Ante un fallo, revisar logs antes de intervenir los volúmenes.
+La configuración `config/hub.json` conserva los formularios nativos, grupos, categorías y SLA. El aprovisionamiento de clientes aplica la política de los dos perfiles dedicados del portal en cada arranque. Para roles distintos, crear otros perfiles desde la administración de GLPI y dar solo el alcance necesario.
 
-## Alcance y versión
+Documentación: [uso](docs/uso-tickets.md), [arquitectura y roles](docs/portal-clientes.md), [configuración institucional](docs/configuracion.md), [QA](docs/qa.md), [operación y recuperación](docs/operacion.md).
 
-El PDF del plan exige nivel 1 inicial y aprobación CIO/Security Lab antes de niveles 2/3. La API heredada se conserva como prototipo bloqueado: todavía carece de autenticación individual y aislamiento suficiente.
-
-Los documentos del 06-09-2026 proponen GLPI 11.0.8 y rechazan 12 RC. El paquete existente es **12.0.0 final**, estable desde el 07-10-2026; se conserva y no se hace downgrade. [Release oficial](https://github.com/glpi-project/glpi/releases/tag/12.0.0).
-
-SHA-256 del paquete contrastado con la release oficial: `90c81d1742f5e345756089a83e7c72848bbcae130ea449c8d32f52ad63dece91`. Las bases PHP/MariaDB/Nginx se fijan por digest; los parches requieren actualizar esos valores y repetir QA.
-
-Entorno local HTTP enlazado a loopback. El piloto institucional requiere VPS/VM, DNS, HTTPS, correo, MFA, cuentas nominativas, restauración y aprobación del Hub. Instalar no equivale a aprobar producción.
+Es un entorno local de desarrollo. Publicarlo requiere HTTPS, cookies Secure, correo y validación institucional de cuentas, MFA, respaldo, restauración y carga. Las comprobaciones locales no equivalen a una aprobación de producción.

@@ -51,6 +51,9 @@ COPY docker/test-hub.php /usr/local/bin/test-hub.php
 COPY docker/seed-demo.php /usr/local/bin/seed-demo.php
 COPY docker/check-demo.php /usr/local/bin/check-demo.php
 COPY config/hub.json /usr/local/share/eticket/hub.json
+COPY docker/etickethub /var/www/html/plugins/etickethub
+COPY docker/configure-client-portal.php /usr/local/bin/configure-client-portal.php
+COPY docker/seed-portal.php /usr/local/bin/seed-portal.php
 
 RUN sed -i 's/\r$//' /usr/local/bin/glpi-entrypoint \
     && chmod +x /usr/local/bin/glpi-entrypoint

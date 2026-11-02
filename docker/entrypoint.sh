@@ -72,6 +72,7 @@ chown -R www-data:www-data config files marketplace
 
 su -s /bin/sh www-data -c 'php /usr/local/bin/configure-glpi.php'
 su -s /bin/sh www-data -c 'php /usr/local/bin/provision-hub.php'
+su -s /bin/sh www-data -c 'php /usr/local/bin/configure-client-portal.php'
 touch files/_eticket-ready
 chown www-data:www-data files/_eticket-ready
 

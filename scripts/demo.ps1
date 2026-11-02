@@ -26,3 +26,4 @@ try {
     $env:GLPI_DEMO_USER = $previousUser
     $env:GLPI_DEMO_PASSWORD = $previousPassword
 }
+& (Join-Path $PSScriptRoot 'portal-demo.ps1')
