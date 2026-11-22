@@ -1,0 +1,27 @@
+import { api, esc, main, skeleton, state } from './core.js';
+import { usersAdmin } from './admin-users.js';
+import { bindFormEditor } from './admin-form.js';
+
+async function administration(generation) {
+  if (!state.user.can_admin) {
+    main.innerHTML = '<section class="panel"><h1>Acceso reservado al gestor</h1><p>Tu perfil no permite administrar la estructura ni los perfiles del sistema.</p><a class="button" href="#/inicio">Volver al inicio</a></section>'; return;
+  }
+  const data = await api('schema');
+  let services;
+  try { services = (await api('services', undefined, { all: 1 })).services; } catch (_) { services = []; }
+  if (generation !== state.generation) return;
+  const glpi = (window.ETICKET_CONFIG || {}).glpiUrl || 'http://localhost:8081';
+  const nativeUrl = key => { try { const url = new URL(glpi.replace(/\/?$/, '/')); url.searchParams.set('redirect', state.user.admin_paths[key]); url.searchParams.set('noAUTO', '1'); return url.href; } catch (_) { return glpi; } };
+  const nativeLink = (key, label, description) => `<a class="admin-tool" href="${esc(nativeUrl(key))}" target="_blank" rel="noopener"><strong>${label} ↗</strong><span>${description}</span></a>`;
+  main.innerHTML = `<p class="eyebrow">GESTOR ADMINISTRADOR</p><h1>Administración de Eticket</h1><p class="lead">Crea las cuentas de tu equipo con su tier, configura el formulario de solicitudes y entra a GLPI cuando lo necesites.</p><div class="admin-tabs" role="tablist" aria-label="Secciones de administración"><button type="button" role="tab" id="tab-perfiles" aria-controls="panel-perfiles" data-tab="perfiles">Usuarios y tiers</button><button type="button" role="tab" id="tab-formulario" aria-controls="panel-formulario" data-tab="formulario">Formulario de solicitudes</button><button type="button" role="tab" id="tab-glpi" aria-controls="panel-glpi" data-tab="glpi">Accesos a GLPI</button></div><div class="admin-panel" id="panel-perfiles" role="tabpanel" aria-labelledby="tab-perfiles"><section class="panel" id="profiles-section">${skeleton("Cargando cuentas", "list")}</section></div><div class="admin-panel" id="panel-formulario" role="tabpanel" aria-labelledby="tab-formulario" hidden><section class="panel"><div class="panel-heading"><div><h2>Estructura de las solicitudes del portal</h2><p class="muted admin-caption">Edita los campos que ya tiene el formulario de nuevas solicitudes y agrega, ordena o quita campos adicionales.</p></div></div><p class="welcome-note">Los cambios se aplican a las nuevas solicitudes; las respuestas de tickets existentes se conservan.</p><form id="schema-form"><h3 class="schema-group">Campos base <span class="muted">· siempre aparecen en el formulario</span></h3><p class="muted admin-caption schema-group-note">Puedes cambiar sus textos. No se pueden quitar ni cambiar de tipo porque el sistema los necesita para crear la solicitud.</p><div id="schema-base"></div><h3 class="schema-group">Campos adicionales</h3><div id="schema-fields"></div><div class="actions"><button id="add-schema-field" type="button" class="button subtle">＋ Añadir campo</button><span id="schema-count" class="muted admin-caption"></span></div><p id="schema-error" class="inline-error" role="alert" hidden></p><div class="actions admin-save"><button type="submit" class="button">Guardar estructura</button><a class="button subtle" href="#/nueva">Ver formulario</a></div></form></section></div><div class="admin-panel" id="panel-glpi" role="tabpanel" aria-labelledby="tab-glpi" hidden><section class="panel"><h2>Accesos a GLPI</h2><div class="admin-tools">${nativeLink('home', 'Abrir GLPI', 'Revisa la operación y configuración completa.')}${nativeLink('profiles', 'Perfiles de GLPI', 'Para casos avanzados: crea un tipo de cuenta con permisos distintos.')}${nativeLink('users', 'Usuarios en GLPI', 'Configuración avanzada de cuentas, entidades y grupos.')}${nativeLink('forms', 'Formularios de GLPI', 'Configura formularios nativos, campos y destinos.')}</div><p class="muted admin-caption">Estos accesos abren GLPI en otra pestaña. Si te pide iniciar sesión, utiliza la misma cuenta de gestor. Las cuentas del día a día se crean en la pestaña Usuarios y tiers.</p></section></div>`;
+  // Pestañas: se recuerda la última abierta en este navegador.
+  const showTab = name => { document.querySelectorAll('.admin-tabs [role=tab]').forEach(tab => { const on = tab.dataset.tab === name; tab.setAttribute('aria-selected', String(on)); tab.tabIndex = on ? 0 : -1; document.getElementById('panel-' + tab.dataset.tab).hidden = !on; }); try { sessionStorage.setItem('eticket-admin-tab', name); } catch (_) { /* Optional memory. */ } };
+  document.querySelector('.admin-tabs').onclick = event => { const tab = event.target.closest('[role=tab]'); if (tab) showTab(tab.dataset.tab); };
+  document.querySelector('.admin-tabs').onkeydown = event => { if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return; const tabs = [...document.querySelectorAll('.admin-tabs [role=tab]')]; const i = tabs.indexOf(document.activeElement); const next = tabs[(i + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; showTab(next.dataset.tab); next.focus(); };
+  let savedTab = 'perfiles'; try { savedTab = sessionStorage.getItem('eticket-admin-tab') || 'perfiles'; } catch (_) { /* Optional memory. */ }
+  showTab(['perfiles', 'formulario', 'glpi'].includes(savedTab) ? savedTab : 'perfiles');
+  usersAdmin(document.getElementById('profiles-section'), nativeUrl('users'));
+  bindFormEditor(data.schema, services);
+}
+
+export { administration };

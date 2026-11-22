@@ -2072,25 +2072,10 @@ dialog.privacy-dialog[open] { display: flex; }
 .privacy-actions { padding: 14px 26px 22px; border-top: 1px solid var(--line); justify-content: flex-end; }
 
 /* ==========================================================================
-   33. Formulario fijo según el cuadrado y aviso del modo demostración
+   33. Tipo elegido en el formulario
    ========================================================================== */
 
 .intent-fixed { margin: 0 0 20px; }
-
-.demo-banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  padding: 8px 20px;
-  background: #fff7d6;
-  color: #5c4300;
-  font-size: 13px;
-  text-align: center;
-  border-bottom: 1px solid #f1dfa0;
-}
-.demo-banner .button { background: #fff; }
 
 /* Guía de ayuda (guia.html) */
 .guide { max-width: 920px; margin: 0 auto; padding: 48px 24px 72px; min-height: 100vh; box-sizing: border-box; }

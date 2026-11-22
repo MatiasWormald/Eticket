@@ -5,7 +5,7 @@ declare(strict_types=1);
 // parallel ticket database. Native permissions are checked on every object.
 require_once dirname(__DIR__) . '/inc/Portal.php';
 global $DB;
-$transaction = in_array($_GET['action'] ?? '', ['register', 'verify_login', 'create', 'reply', 'edit', 'delete', 'solve', 'approve', 'save_schema', 'status', 'save_user', 'delete_user', 'save_profile', 'delete_profile', 'escalate', 'reassign'], true);
+$transaction = EticketPortal::requiresTransaction($_GET['action'] ?? null);
 try {
     if ($transaction) $DB->beginTransaction();
     $response = EticketPortal::handle();

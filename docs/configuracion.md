@@ -2,6 +2,18 @@
 
 Fuente: PDF de niveles y documento de implementación entregados en la carpeta confidencial. Los originales se excluyen de Git.
 
+## Datos que usa el portal
+
+| Dato | Modelo de GLPI | Ubicación |
+|---|---|---|
+| Cuenta y correo | `User`, `UserEmail` | `glpi_users`, `glpi_useremails` |
+| Accesos y tiers | `Profile_User`, `Group_User`, `Group_Ticket` | Asignaciones de perfil, grupo y ticket de GLPI |
+| Solicitud y conversación | `Ticket`, `ITILFollowup`, `ITILSolution` | Registros de soporte de GLPI |
+| Campos del formulario y catálogo adicional | `Config`, `ITILCategory` | `glpi_configs` con contexto `plugin:etickethub` y categorías de GLPI |
+| Adjuntos | `Document`, `Document_Item` | Metadatos en MariaDB y archivos en el volumen `glpi_files` |
+
+El plugin opera sobre los modelos de GLPI para aplicar sus permisos y mantener las relaciones entre registros. GLPI administra el esquema de MariaDB. Los scripts de provisión cargan el catálogo y la configuración inicial. Para actualizar una instalación existente, consulta el [procedimiento de operación](operacion.md).
+
 ## Entidades y perfiles
 
 Se crean las seis unidades del Hub como entidades hijas. Grupos y categorías recursivos de la raíz permiten triage transversal. **Crear entidades no mueve ni segrega tickets automáticamente**: revisar entidad de destino al asignar cada cliente/unidad.

@@ -2,7 +2,7 @@
 
 ## Arquitectura implementada
 
-El cliente usa el frontend del Tech Hub en `site/index.html`, `site/assets/portal.css` y `site/assets/portal.js`. Nginx sirve la web y publica el backend del plugin GLPI en `/api`. El navegador no necesita cambiar de puerto ni de interfaz.
+El cliente usa el frontend del Tech Hub en `site/index.html`, con estilos en `site/assets/portal.css` y pantallas en `site/assets/portal/`. Nginx sirve la web y publica el backend del plugin GLPI en `/api`. El navegador usa el mismo origen para ambas operaciones. Consulta el [mapa del código](../README.md#mapa-del-código) para localizar cada pantalla y operación.
 
 El plugin está en `docker/etickethub`. `front/api.php` carga el controlador `inc/Portal.php` dentro del kernel de GLPI; la base, usuarios, sesiones, adjuntos, estados y auditoría siguen siendo los de GLPI. No existe una cuenta técnica compartida ni una segunda base de tickets. Las mutaciones de tickets se ejecutan dentro de transacciones y los permisos se verifican en cada objeto.
 
