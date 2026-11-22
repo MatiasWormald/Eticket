@@ -11,8 +11,8 @@ $DB->beginTransaction();
 try {
     Session::callAsSystem(function () use ($CFG_GLPI): void {
         foreach ([
-            ['agente.demo', 'GLPI_DEMO_AGENT_PASSWORD', 'ETICKET Portal Agente', 'Agente'],
-            ['gestor.demo', 'GLPI_DEMO_MANAGER_PASSWORD', 'ETICKET Portal Gestor', 'Gestor'],
+            ['agente.eticket', 'GLPI_DEMO_AGENT_PASSWORD', 'ETICKET Portal Agente', 'Agente'],
+            ['gestor.eticket', 'GLPI_DEMO_MANAGER_PASSWORD', 'ETICKET Portal Gestor', 'Gestor'],
             ['cliente2.demo', 'GLPI_DEMO_OTHER_PASSWORD', 'ETICKET Cliente externo', 'Otro cliente'],
         ] as [$name, $key, $role, $first]) {
             $password = getenv($key) ?: '';
@@ -33,6 +33,18 @@ try {
             if (!(new Profile_User())->add(['users_id' => $uid, 'profiles_id' => $pid, 'entities_id' => 0, 'is_recursive' => $name === 'cliente2.demo' ? 0 : 1])
                 || !(new User())->update(['id' => $uid, 'profiles_id' => $pid, 'entities_id' => 0])) throw new RuntimeException('No se pudo configurar ' . $name);
             echo "Creado $name: $role\n";
+        }
+        $agent = array_key_first((new User())->find(['name' => 'agente.eticket']));
+        $desk = array_key_first((new Group())->find(['name' => 'HD-L1-MESA', 'entities_id' => 0]));
+        $membership = new Group_User();
+        if (!$desk || (!$membership->find(['users_id' => $agent, 'groups_id' => $desk])
+            && !$membership->add(['users_id' => $agent, 'groups_id' => $desk]))) throw new RuntimeException('No se pudo asignar la mesa al agente.');
+        foreach (['agente.demo', 'gestor.demo'] as $name) {
+            foreach ((new User())->find(['name' => $name, 'comment' => 'Cuenta ficticia eTicket portal: ' . $name, 'is_deleted' => 0]) as $old) {
+                if (!(new User())->update(['id' => $old['id'], 'is_active' => 0]) || !(new User())->delete(['id' => $old['id']], false)) {
+                    throw new RuntimeException('No se pudo retirar ' . $name);
+                }
+            }
         }
     });
     $DB->commit();

@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   const main = document.getElementById('main');
-  const state = { user: null, csrf: '', services: null, generation: 0, offset: 0, query: '', status: '', ticket: null, flash: '', pendingEmail: '', verifyMode: '', intent: '', prefillUser: '' };
+  const state = { user: null, csrf: '', generation: 0, offset: 0, query: '', status: '', ticket: null, flash: '', pendingEmail: '', mfa: null, intent: '', prefillUser: '' };
   try { state.intent = sessionStorage.getItem('eticket-intent') || ''; } catch (_) { /* Optional memory. */ }
   const INTENTS = { servicio: 'Quiero un servicio', problema: 'Tengo un problema' };
   const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -16,6 +16,10 @@
     const el = document.getElementById('notice');
     el.textContent = text; el.className = 'notice' + (error ? ' error' : ''); el.hidden = !text;
   }
+  function skeleton(label, type = "page") {
+    const lines = '<span></span><span></span><span></span>';
+    return `<div class="skeleton skeleton-${type}" role="status"><span class="visually-hidden">${label}</span><div aria-hidden="true">${type === "page" ? '<div class="skeleton-heading"><span></span><span></span></div>' : ""}<div class="skeleton-block">${lines}</div><div class="skeleton-block">${lines}</div></div></div>`;
+  }
   const PUBLIC_ACTIONS = ['login', 'register', 'verify_login', 'resend_code'];
   async function api(action, body, params = {}) {
     const url = new URL('api', window.location.href);
@@ -29,15 +33,17 @@
     let response;
     try { response = await fetch(url, options); }
     catch (_) { throw new Error('No pudimos conectar. Comprueba tu conexión e intenta nuevamente.'); }
-    if (response.status === 429) throw new Error(action === 'login' ? 'Has intentado ingresar varias veces. Espera un minuto antes de volver a intentar.' : 'Hiciste varios intentos seguidos. Espera un minuto antes de volver a intentar.');
+    if (response.status === 429 && action !== 'reauth_users') throw new Error(action === 'login' ? 'Has intentado ingresar varias veces. Espera un minuto antes de volver a intentar.' : 'Hiciste varios intentos seguidos. Espera un minuto antes de volver a intentar.');
     if (response.status === 413) throw new Error('El archivo supera el tamaño permitido. Adjunta uno de hasta 10 MB.');
-    if (response.status === 502 || response.status === 503 || response.status === 504) throw new Error('El servicio de soporte no está disponible por el momento. Intenta nuevamente en unos instantes.');
     const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json') && [502, 503, 504].includes(response.status)) throw new Error('El servicio de soporte no está disponible por el momento. Intenta nuevamente en unos instantes.');
     if (!contentType.includes('application/json')) throw new Error(action === 'login' ? 'No pudimos completar el acceso. Si tu cuenta utiliza doble factor, ingresa primero desde el acceso institucional de GLPI.' : 'El servicio devolvió una respuesta inesperada. Intenta nuevamente.');
     const data = await response.json();
     if (!response.ok) {
       if (response.status === 401 && !PUBLIC_ACTIONS.includes(action)) { state.user = null; shell(); route(); }
-      throw new Error(data.error || 'No pudimos completar la operación.');
+      const error = new Error(data.error || 'No pudimos completar la operación.');
+      error.status = response.status;
+      throw error;
     }
     return data;
   }
@@ -47,6 +53,7 @@
     const logged = !!state.user;
     document.getElementById('sidebar').hidden = !logged;
     document.getElementById('logout').hidden = !logged;
+    document.getElementById('profile-link').hidden = !logged;
     if (!logged) return;
     const u = state.user;
     document.getElementById('account-name').textContent = u.name;
@@ -83,11 +90,11 @@
         const data = await api('login', { username: document.getElementById('username').value, password: document.getElementById('password').value });
         if (data.verification_required) {
           document.getElementById('password').value = '';
-          state.csrf = data.csrf || state.csrf; state.pendingEmail = data.email || ''; state.verifyMode = 'login'; state.prefillUser = '';
+          state.csrf = data.csrf || state.csrf; state.mfa = data.mfa; state.prefillUser = '';
           if (window.location.hash === '#/verificar') route(); else window.location.hash = '#/verificar';
           return;
         }
-        state.user = data.user; state.csrf = data.csrf; state.services = null; state.prefillUser = '';
+        state.user = data.user; state.csrf = data.csrf; state.prefillUser = '';
         if (!state.user) throw new Error('La cuenta no tiene un perfil de soporte activo.');
         document.getElementById('password').value = ''; notice(''); shell();
         if (window.location.hash === '#/inicio') route(); else window.location.hash = '#/inicio';
@@ -95,7 +102,7 @@
     };
   }
   function register() {
-    main.innerHTML = `<section class="login-grid">${storyHtml('Crea tu cuenta y empieza hoy', 'Regístrate una sola vez para enviar solicitudes y seguir cada conversación con el equipo.')}<form id="register-form" class="login-form"><h2>Crea tu cuenta</h2><p>Completa tus datos. Cada vez que inicies sesión te enviaremos un código a tu correo para confirmar que eres tú.</p><div class="field"><label for="reg-name">Nombre completo</label><input id="reg-name" name="name" autocomplete="name" required minlength="3" maxlength="120" placeholder="Ej.: Camila Rojas"></div><div class="field"><label for="reg-email">Correo electrónico</label><input id="reg-email" name="email" type="email" autocomplete="email" required maxlength="255" placeholder="nombre@gmail.com" value="${esc(state.pendingEmail)}"><small>Aquí te llegarán el código de verificación y los avances de tus solicitudes.</small></div><div class="field"><label for="reg-password">Contraseña</label><div class="password-row"><input id="reg-password" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="1024" aria-describedby="reg-password-hint"><button type="button" class="button subtle small" id="show-reg-password" aria-label="Mostrar contraseñas" aria-pressed="false">Mostrar</button></div><small id="reg-password-hint">Mínimo 8 caracteres. Combina letras y números, y no la uses en otros sitios.</small></div><div class="field"><label for="reg-password2">Repite la contraseña</label><input id="reg-password2" type="password" autocomplete="new-password" required minlength="8" maxlength="1024"></div><label class="check-field consent"><input type="checkbox" id="reg-consent" required><span>Acepto la <button type="button" class="link-button" data-open-privacy data-privacy-accept>política de privacidad</button> y el uso de mis datos para gestionar mis solicitudes.</span></label><p class="inline-error" id="register-error" role="alert" hidden></p><button type="submit" class="button">Crear cuenta <span aria-hidden="true">→</span></button><p class="login-switch">¿Ya tienes cuenta? <a href="#/ingresar">Inicia sesión</a></p></form></section>`;
+    main.innerHTML = `<section class="login-grid">${storyHtml('Crea tu cuenta y empieza hoy', 'Regístrate una sola vez para enviar solicitudes y seguir cada conversación con el equipo.')}<form id="register-form" class="login-form"><h2>Crea tu cuenta</h2><p>Completa tus datos para crear una cuenta de cliente en Eticket. En tu primer ingreso te enviaremos un código al correo.</p><div class="field"><label for="reg-name">Nombre completo</label><input id="reg-name" name="name" autocomplete="name" required minlength="3" maxlength="120" placeholder="Ej.: Camila Rojas"></div><div class="field"><label for="reg-email">Correo electrónico</label><input id="reg-email" name="email" type="email" autocomplete="email" required maxlength="255" placeholder="nombre@gmail.com" value="${esc(state.pendingEmail)}"><small>Usa este correo para iniciar sesión.</small></div><div class="field"><label for="reg-password">Contraseña</label><div class="password-row"><input id="reg-password" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128" aria-describedby="reg-password-hint"><button type="button" class="button subtle small" id="show-reg-password" aria-label="Mostrar contraseñas" aria-pressed="false">Mostrar</button></div><small id="reg-password-hint">Mínimo 8 caracteres. Combina letras y números, y no la uses en otros sitios.</small></div><div class="field"><label for="reg-password2">Repite la contraseña</label><input id="reg-password2" type="password" autocomplete="new-password" required minlength="8" maxlength="128"></div><label class="check-field consent"><input type="checkbox" id="reg-consent" required><span>Acepto la <button type="button" class="link-button" data-open-privacy data-privacy-accept>política de privacidad</button> y el uso de mis datos para gestionar mis solicitudes.</span></label><p class="inline-error" id="register-error" role="alert" hidden></p><button type="submit" class="button">Crear cuenta <span aria-hidden="true">→</span></button><p class="login-switch">¿Ya tienes cuenta? <a href="#/ingresar">Inicia sesión</a></p></form></section>`;
     bindPasswordToggle('show-reg-password', ['reg-password', 'reg-password2']);
     document.getElementById('register-form').onsubmit = event => {
       event.preventDefault();
@@ -104,54 +111,64 @@
         const email = document.getElementById('reg-email').value.trim().toLowerCase();
         const password = document.getElementById('reg-password').value;
         if (password !== document.getElementById('reg-password2').value) throw new Error('Las contraseñas no coinciden.');
-        await api('register', { name, email, password });
+        const data = await api('register', { name, email, password, consent: document.getElementById('reg-consent').checked });
         document.getElementById('reg-password').value = ''; document.getElementById('reg-password2').value = '';
-        // La verificación en dos pasos ocurre al iniciar sesión.
         state.prefillUser = email;
-        state.flash = 'Tu cuenta fue creada. Inicia sesión: te enviaremos un código a tu correo para confirmar que eres tú.';
-        window.location.hash = '#/ingresar';
+        state.csrf = data.csrf;
+        state.mfa = data.mfa;
+        window.location.hash = '#/verificar';
       }, 'register-error');
     };
   }
   function verify() {
-    const mode = state.verifyMode;
-    const email = state.pendingEmail;
-    if (mode !== 'login') { login(); return; }
-    const isLogin = true;
-    const destination = email ? `a <strong>${esc(email)}</strong>` : 'a tu correo electrónico registrado';
-    main.innerHTML = `<section class="login-grid">${storyHtml(isLogin ? 'Un paso más para entrar' : 'Un último paso', isLogin ? 'Para proteger tu cuenta, confirmamos que eres tú con un código que enviamos a tu correo.' : 'Verificamos tu correo para proteger tu cuenta y asegurarnos de que los avances te lleguen a ti.')}<form id="verify-form" class="login-form"><h2>Verificación de seguridad</h2><div class="verify-alert" id="verify-alert" role="status"><span class="verify-alert-icon" aria-hidden="true">✓</span><p>Hemos enviado un código de seguridad ${destination}.</p><button type="button" id="close-alert" aria-label="Cerrar aviso">×</button></div><p>Por seguridad, ingresa el código numérico de 6 dígitos que enviamos a tu correo.</p><div class="field"><label for="verify-code">Código de verificación</label><input id="verify-code" name="code" class="code-input" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required placeholder="000000" aria-describedby="verify-hint"><small id="verify-hint">Si no lo ves, revisa también la carpeta de spam.</small></div><p class="inline-error" id="verify-error" role="alert" hidden></p><button type="submit" class="button">${isLogin ? 'Verificar y acceder' : 'Verificar y activar mi cuenta'} <span aria-hidden="true">→</span></button><div class="login-help verify-help"><p>¿No te llegó el código? <button type="button" class="link-button" id="resend-code">Reenviar código</button></p><a class="verify-back" href="${isLogin ? '#/ingresar' : '#/registro'}"><span aria-hidden="true">←</span> Volver a ingresar datos</a></div></form></section>`;
-    document.getElementById('close-alert').onclick = () => { document.getElementById('verify-alert').hidden = true; };
-    const codeInput = document.getElementById('verify-code');
-    codeInput.oninput = () => { codeInput.value = codeInput.value.replace(/\D/g, '').slice(0, 6); };
-    codeInput.focus();
-    const resend = document.getElementById('resend-code');
-    let timer = null;
-    const cooldown = seconds => {
-      clearInterval(timer); let left = seconds; resend.disabled = true; resend.textContent = `Reenviar en ${left} s`;
-      timer = setInterval(() => {
-        left -= 1;
-        if (!document.contains(resend)) { clearInterval(timer); return; }
-        if (left <= 0) { clearInterval(timer); resend.disabled = false; resend.textContent = 'Reenviar código'; }
-        else resend.textContent = `Reenviar en ${left} s`;
-      }, 1000);
-    };
-    cooldown(60);
-    resend.onclick = async () => {
-      resend.disabled = true;
-      const errorEl = document.getElementById('verify-error'); errorEl.hidden = true;
-      try {
-        await api('resend_code', { purpose: 'login' });
-        document.getElementById('verify-alert').hidden = false; cooldown(60);
-      } catch (error) { errorEl.textContent = error.message; errorEl.hidden = false; resend.disabled = false; }
-    };
+    const { setup, secret, account, method, destination, retry_in: retryIn } = state.mfa;
+    if (method === 'email') {
+      main.innerHTML = `<section class="login-grid">${storyHtml('Protege tu cuenta', 'Confirma tu acceso con el código que enviamos a tu correo.')}<form id="verify-form" class="login-form"><h2>Verifica tu correo</h2><p>Enviamos un código de 6 dígitos a <strong>${esc(destination)}</strong>. Vence en 5 minutos.</p><div class="field"><label for="verify-code">Código de verificación</label><input id="verify-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required></div><p id="verify-error" class="inline-error" role="alert" hidden></p><button class="button" type="submit">Verificar y acceder</button><small>Eticket recordará esta verificación durante 24 horas en este navegador.</small><button id="resend-code" class="button subtle" type="button">Reenviar código</button><p><a href="#/ingresar">Volver a ingresar datos</a></p></form></section>`;
+      const resend = document.getElementById('resend-code');
+      const available = Date.now() + retryIn * 1000;
+      function updateResend() {
+        if (!resend.isConnected) return;
+        const remaining = Math.ceil((available - Date.now()) / 1000);
+        resend.disabled = remaining > 0;
+        resend.textContent = remaining > 0 ? `Reenviar en ${remaining} s` : 'Reenviar código';
+        if (remaining > 0) setTimeout(updateResend, 1000);
+      }
+      updateResend();
+      resend.onclick = async () => {
+        resend.disabled = true;
+        try {
+          const { mfa } = await api('resend_code', {});
+          if (!resend.isConnected) return;
+          state.mfa = mfa;
+          verify();
+          notice('Enviamos un código nuevo.');
+        } catch (error) {
+          notice(error.message, true);
+          resend.disabled = false;
+        }
+      };
+      bindVerify();
+      return;
+    }
+    const heading = setup ? 'Configura la verificación en dos pasos' : 'Verificación en dos pasos';
+    main.innerHTML = `<section class="login-grid">${storyHtml('Protege tu cuenta', 'Usa tu aplicación de autenticación para verificar el acceso a Eticket.')}<form id="verify-form" class="login-form"><h2>${heading}</h2>${setup ? `<p>En tu aplicación de autenticación, añade una cuenta basada en tiempo con el nombre <strong>${esc(account)}</strong> e introduce esta clave:</p><div class="field"><label for="mfa-secret">Clave de configuración</label><input id="mfa-secret" value="${esc(secret)}" readonly spellcheck="false" autocomplete="off"></div>` : '<p>Ingresa el código de tu aplicación o uno de tus códigos de recuperación.</p>'}<div class="field"><label for="verify-code">Código de verificación</label><input id="verify-code" name="code" autocomplete="one-time-code" ${setup ? 'inputmode="numeric" pattern="[0-9]{6}" maxlength="6"' : 'maxlength="64"'} minlength="6" required></div><p class="inline-error" id="verify-error" role="alert" hidden></p><button type="submit" class="button">Verificar y acceder</button><small>Eticket recordará esta verificación durante 24 horas en este navegador.</small><p><a href="#/ingresar">Volver a ingresar datos</a></p></form></section>`;
+    bindVerify();
+  }
+  function bindVerify() {
+    const code = document.getElementById('verify-code');
+    code.focus();
     document.getElementById('verify-form').onsubmit = event => {
       event.preventDefault();
       submit(event.currentTarget, async () => {
-        const data = await api('verify_login', { code: codeInput.value });
-        clearInterval(timer); state.pendingEmail = ''; state.verifyMode = '';
+        const data = await api('verify_login', { code: code.value.trim() });
         if (!data.user) throw new Error('No pudimos iniciar tu sesión. Vuelve a ingresar tus datos.');
-        state.user = data.user; state.csrf = data.csrf || state.csrf; state.services = null; state.prefillUser = '';
-        if (window.location.hash === '#/inicio') route(); else window.location.hash = '#/inicio';
+        state.user = data.user;
+        state.csrf = data.csrf;
+        state.mfa = null;
+        if (!data.backup_codes?.length) { window.location.hash = '#/inicio'; return; }
+        shell();
+        main.innerHTML = `<section class="panel"><h1>Códigos de recuperación</h1><p>Guarda estos códigos en un lugar seguro. Cada uno se puede usar una vez si pierdes acceso a tu autenticador.</p><ul>${data.backup_codes.map(code => `<li><code>${esc(code)}</code></li>`).join('')}</ul><a class="button" href="#/inicio">Continuar a mi espacio</a></section>`;
+        main.focus();
       }, 'verify-error');
     };
   }
@@ -170,7 +187,7 @@
   }
   async function dashboard(generation) {
     const staff = state.user.role !== 'cliente';
-    main.innerHTML = `<p class="eyebrow">${staff ? 'MESA DE AYUDA' : 'TU ESPACIO DE SOPORTE'}</p><h1>Hola, ${esc(state.user.name.split(' ')[0])}<span class="brand-dot">.</span></h1><p class="lead">${staff ? 'Las conversaciones y solicitudes de tu equipo, en un solo lugar.' : '¿En qué podemos ayudarte hoy? Crea una solicitud o retoma una conversación con nuestro equipo.'}</p>${staff ? `<div class="role-info">${state.user.role === 'gestor' ? 'Perfil gestor: supervisas todas las solicitudes y puedes intervenir en cualquier caso cuando lo estimes necesario. Administras las cuentas, los tiers y el formulario desde Administración.' : 'Perfil agente: atiendes las solicitudes asignadas a ti o a tu equipo. Puedes responder, cambiar el estado, registrar la solución o escalar el caso al siguiente nivel.'}</div>` : ''}${staff ? '' : tierGuideHtml()}<div class="choice-grid">${canCreate() ? `<a class="choice" href="#/nueva"><span class="choice-icon" aria-hidden="true">${state.intent === 'servicio' ? '＋' : '!'}</span><h2>${state.intent === 'servicio' ? 'Pedir un servicio' : 'Reportar un problema'}</h2><p>${state.intent === 'servicio' ? 'Cuéntanos qué necesitas. Te guiaremos para enviarlo al equipo correcto.' : 'Cuéntanos qué está fallando. Te guiaremos para enviarlo al equipo correcto.'}</p><span>Comenzar solicitud →</span></a>` : ''}<a class="choice" href="#/tickets"><span class="choice-icon" aria-hidden="true">▤</span><h2>${state.user.role === 'agente' ? 'Solicitudes asignadas' : staff ? 'Todas las solicitudes' : 'Mis solicitudes'}</h2><p>Revisa avances, responde al equipo y consulta las soluciones.</p><span>Ver conversaciones →</span></a></div><section class="panel"><div class="panel-heading"><h2>Solicitudes recientes</h2><a href="#/tickets">Ver todas →</a></div><div id="recent-tickets" class="loading">Cargando solicitudes…</div></section><p class="welcome-note">No necesitas crear otra solicitud para agregar información. Abre la conversación existente y escribe tu respuesta.</p>`;
+    main.innerHTML = `<p class="eyebrow">${staff ? 'MESA DE AYUDA' : 'TU ESPACIO DE SOPORTE'}</p><h1>Hola, ${esc(state.user.name.split(' ')[0])}<span class="brand-dot">.</span></h1><p class="lead">${staff ? 'Las conversaciones y solicitudes de tu equipo, en un solo lugar.' : '¿En qué podemos ayudarte hoy? Crea una solicitud o retoma una conversación con nuestro equipo.'}</p>${staff ? `<div class="role-info">${state.user.role === 'gestor' ? 'Perfil gestor: supervisas todas las solicitudes y puedes intervenir en cualquier caso cuando lo estimes necesario. Administras las cuentas, los tiers y el formulario desde Administración.' : 'Perfil agente: atiendes las solicitudes asignadas a ti o a tu equipo. Puedes responder, cambiar el estado, registrar la solución o escalar el caso al siguiente nivel.'}</div>` : ''}${staff ? '' : tierGuideHtml()}<div class="choice-grid">${canCreate() ? `<a class="choice" href="#/nueva"><span class="choice-icon" aria-hidden="true">${state.intent === 'servicio' ? '＋' : '!'}</span><h2>${state.intent === 'servicio' ? 'Pedir un servicio' : 'Reportar un problema'}</h2><p>${state.intent === 'servicio' ? 'Cuéntanos qué necesitas. Te guiaremos para enviarlo al equipo correcto.' : 'Cuéntanos qué está fallando. Te guiaremos para enviarlo al equipo correcto.'}</p><span>Comenzar solicitud →</span></a>` : ''}<a class="choice" href="#/tickets"><span class="choice-icon" aria-hidden="true">▤</span><h2>${state.user.role === 'agente' ? 'Solicitudes asignadas' : staff ? 'Todas las solicitudes' : 'Mis solicitudes'}</h2><p>Revisa avances, responde al equipo y consulta las soluciones.</p><span>Ver conversaciones →</span></a></div><section class="panel"><div class="panel-heading"><h2>Solicitudes recientes</h2><a href="#/tickets">Ver todas →</a></div><div id="recent-tickets">${skeleton("Cargando solicitudes", "list")}</div></section><p class="welcome-note">No necesitas crear otra solicitud para agregar información. Abre la conversación existente y escribe tu respuesta.</p>`;
     const data = await api('tickets');
     if (generation !== state.generation) return;
     const el = document.getElementById('recent-tickets'); el.className = 'ticket-list'; el.innerHTML = ticketCards(data.tickets.slice(0, 5));
@@ -220,6 +237,40 @@
   // son fijos (cliente, agente, gestor) y a cada agente se le asigna su tier.
   // En GLPI, el tier de un agente es el grupo al que pertenece.
   const USER_ROLES = { cliente: 'Cliente', agente: 'Agente', gestor: 'Gestor' };
+  async function myProfile(generation) {
+    const { profile } = await api('profile');
+    if (generation !== state.generation) return;
+    const glpi = (window.ETICKET_CONFIG || {}).glpiUrl || 'http://localhost:8081';
+    main.innerHTML = `<h1>Mi perfil</h1><section class="panel"><form id="own-profile"><dl class="meta-list"><div><dt>Usuario</dt><dd>${esc(profile.login)}</dd></div><div><dt>Tipo de cuenta</dt><dd>${USER_ROLES[profile.role]}</dd></div>${profile.tier ? `<div><dt>Tier</dt><dd>${chip(profile.tier)}</dd></div>` : ''}</dl><div class="field"><label for="profile-name">Nombre completo</label><input id="profile-name" name="name" autocomplete="name" required minlength="3" maxlength="120" value="${esc(profile.name)}"></div><div class="field"><label for="profile-email">Correo electrónico</label><input id="profile-email" name="email" autocomplete="email" type="email" maxlength="255" value="${esc(profile.email)}"></div><div class="field"><label for="profile-password">${profile.mfa_enabled ? "Código de tu autenticador" : "Contraseña actual"}</label><input id="profile-password" name="password" ${profile.mfa_enabled ? 'inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"' : 'type="password" autocomplete="current-password" maxlength="4096"'} required></div><p id="profile-error" class="inline-error" role="alert" hidden></p><button type="submit" class="button">Guardar perfil</button></form></section><section class="panel"><h2>Verificación en dos pasos</h2><p>${profile.email ? "Eticket envía el código a tu correo al iniciar sesión." : "Agrega un correo para recibir los códigos de Eticket."}</p><a class="button subtle" href="${esc(glpi)}/front/preference.php" target="_blank" rel="noopener">Preferencias de GLPI</a></section>${profile.can_delete ? '<section class="panel"><h2>Eliminar mi cuenta</h2><p>Tu cuenta se eliminará de GLPI de forma permanente.</p><button id="delete-own" type="button" class="button danger">Eliminar mi cuenta</button><p id="delete-profile-error" class="inline-error" role="alert" hidden></p></section>' : ''}`;
+    const form = document.getElementById('own-profile');
+    form.onsubmit = event => {
+      event.preventDefault();
+      submit(form, async () => {
+        const body = Object.fromEntries(new FormData(form));
+        form.elements.password.value = '';
+        const { profile: saved } = await api('save_profile', body);
+        if (generation !== state.generation) return;
+        state.user.name = saved.name;
+        form.elements.name.value = saved.name;
+        form.elements.email.value = saved.email;
+        shell();
+        notice('Perfil actualizado.');
+      }, 'profile-error');
+    };
+    const remove = document.getElementById('delete-own');
+    if (remove) remove.onclick = async () => {
+      const password = form.elements.password.value;
+      if (!password) { form.elements.password.reportValidity(); return; }
+      if (!window.confirm('¿Eliminar tu cuenta de Eticket? Se cerrará tu sesión.')) return;
+      form.elements.password.value = '';
+      remove.disabled = true;
+      try { await api('delete_profile', { password, confirm: true }); await endSession('Cuenta eliminada.'); }
+      catch (error) {
+        const feedback = document.getElementById('delete-profile-error');
+        if (feedback) { feedback.textContent = error.message; feedback.hidden = false; }
+      } finally { remove.disabled = false; }
+    };
+  }
   const ROLE_HELP = {
     cliente: 'Crea solicitudes y conversa con el equipo. No tiene tier.',
     agente: 'Responde, cambia estados, resuelve y deriva los casos de su tier.',
@@ -234,26 +285,43 @@
     let users;
     try { users = (await api('users')).users; }
     catch (error) {
-      el.innerHTML = `<h2>Usuarios y tiers</h2><p class="welcome-note">El servidor todavía no permite administrar cuentas desde aquí. Mientras tanto, puedes hacerlo en GLPI.</p><a class="button subtle" href="${esc(fallbackUrl)}" target="_blank" rel="noopener">Abrir usuarios en GLPI ↗</a>`;
+      const glpiLink = `<a class="button subtle" href="${esc(fallbackUrl)}" target="_blank" rel="noopener">Abrir usuarios en GLPI ↗</a>`;
+      if (error.status === 428) {
+        el.innerHTML = `<h2>Usuarios y tiers</h2><form id="user-reauth"><p>Confirma tu identidad para administrar cuentas.</p><div class="field"><label for="manager-password">${state.user.mfa_enabled ? "Código de tu autenticador" : "Tu contraseña de gestor"}</label><input id="manager-password" name="password" ${state.user.mfa_enabled ? 'inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"' : 'type="password" autocomplete="current-password"'} required></div><p id="reauth-error" class="inline-error" role="alert" hidden></p><div class="actions"><button type="submit" class="button">Confirmar</button>${glpiLink}</div></form>`;
+        const form = el.querySelector('form');
+        form.onsubmit = event => {
+          event.preventDefault();
+          submit(form, async () => {
+            const password = form.elements.password.value;
+            form.elements.password.value = '';
+            await api('reauth_users', { password });
+            await usersAdmin(el, fallbackUrl);
+          }, 'reauth-error');
+        };
+      } else {
+        el.innerHTML = `<h2>Usuarios y tiers</h2><p class="welcome-note">${esc(error.message)}</p>${glpiLink}`;
+      }
       return;
     }
+    if (!el.isConnected) return;
     let editing = null;          // null = sin formulario; {} = cuenta nueva; {...} = cuenta existente
-    let query = ''; let roleFilter = '';
+    let query = ''; let roleFilter = ''; let tierFilter = '';
     const isSelf = u => !!state.user && u.login === state.user.login;
     function rowsHtml() {
       const q = query.trim().toLowerCase();
-      const list = users.filter(u => (!roleFilter || u.role === roleFilter) && (!q || `${u.name} ${u.email} ${u.login}`.toLowerCase().includes(q)));
+      const list = users.filter(u => (!roleFilter || u.role === roleFilter) && (!tierFilter || (u.role === 'agente' && String(u.tier) === tierFilter)) && (!q || `${u.name} ${u.email} ${u.login}`.toLowerCase().includes(q)));
       if (!list.length) return '<p class="muted users-empty">No hay cuentas que coincidan con la búsqueda.</p>';
-      return `<div class="profile-list">${list.map(u => `<article class="profile-row user-row${u.role === 'agente' && TIERS[u.tier] ? ` tier-accent-${u.tier}` : ''}${u.active === false ? ' inactive' : ''}"><div class="profile-main"><strong>${esc(u.name)}${isSelf(u) ? ' <span class="muted">(tú)</span>' : ''}</strong><small>${esc(u.email || u.login)}</small></div><div class="profile-tier"><span class="role-tag">${esc(USER_ROLES[u.role] || u.role)}</span>${u.role === 'agente' ? (TIERS[u.tier] ? chip(u.tier) : '<span class="muted">Sin tier</span>') : ''}</div><div class="profile-users">${u.active === false ? '<span class="state-off">Inactiva</span>' : 'Activa'}</div><div class="actions profile-actions"><button type="button" class="button subtle small" data-edit-user="${esc(u.id)}">Editar</button></div></article>`).join('')}</div>`;
+      return `<div class="profile-list">${list.map(u => `<article class="profile-row user-row user-role-${u.role}${u.role === 'agente' && TIERS[u.tier] ? ` tier-accent-${u.tier}` : ''}${u.active === false ? ' inactive' : ''}"><div class="profile-main"><strong>${esc(u.name)}${isSelf(u) ? ' <span class="muted">(tú)</span>' : ''}</strong><small>${esc(u.email || u.login)}</small></div><div class="profile-tier"><span class="role-tag">${esc(USER_ROLES[u.role] || u.role)}</span>${u.role === 'agente' ? (TIERS[u.tier] ? chip(u.tier) : '<span class="muted">Sin tier</span>') : ''}</div><div class="profile-users">${u.active === false ? '<span class="state-off">Inactiva</span>' : 'Activa'}</div><div class="actions profile-actions"><button type="button" class="button edit-action small" data-edit-user="${esc(u.id)}">Editar</button>${isSelf(u) ? "" : `<button type="button" class="button danger small" data-delete-user="${esc(u.id)}">Eliminar</button>`}</div></article>`).join('')}</div>`;
     }
     function formHtml(u) {
       const role = u.role || 'agente'; const isNew = !u.id; const self = isSelf(u);
-      return `<form id="user-form" class="profile-form panel-inset" novalidate><h3>${isNew ? 'Crear cuenta' : 'Editar cuenta'}</h3><div class="form-row"><div class="field"><label for="user-name">Nombre completo</label><input id="user-name" name="name" required minlength="3" maxlength="120" value="${esc(u.name || '')}" placeholder="Ej.: Ana Soto" autocomplete="off"></div><div class="field"><label for="user-email">Correo</label><input id="user-email" name="email" type="email" required maxlength="255" value="${esc(u.email || '')}" placeholder="ana.soto@userena.cl" autocomplete="off"></div></div><div class="field"><label for="user-login">Usuario para iniciar sesión</label><input id="user-login" name="login" required minlength="3" maxlength="60" pattern="[a-z0-9._-]+" value="${esc(u.login || '')}" placeholder="ana.soto" autocomplete="off"${isNew ? '' : ' readonly'}><small>${isNew ? 'Se completa con el correo. Solo minúsculas, números, punto, guion o guion bajo.' : 'El usuario no se puede cambiar.'}</small></div><fieldset class="profile-role"><legend>Tipo de cuenta</legend>${Object.entries(USER_ROLES).map(([value, label]) => `<label class="role-option"><input type="radio" name="role" value="${value}"${role === value ? ' checked' : ''}${self ? ' disabled' : ''}><span>${label}</span></label>`).join('')}<small id="user-role-help">${self ? 'No puedes cambiar tu propio tipo de cuenta.' : ROLE_HELP[role]}</small></fieldset><div class="field" id="user-tier-field"${role === 'agente' ? '' : ' hidden'}><label for="user-tier">Tier</label><select id="user-tier" name="tier"><option value="">Selecciona un tier</option>${[4, 3, 2, 1].map(l => `<option value="${l}"${Number(u.tier) === l ? ' selected' : ''}>${esc(tierLabel(l))}</option>`).join('')}</select><small>Atenderá y podrá resolver los casos de ese tier. El cliente verá el tier junto a sus respuestas.</small></div>${isNew ? `<div class="field"><label for="user-password">Contraseña temporal</label><div class="password-row"><input id="user-password" name="password" required minlength="8" maxlength="128" autocomplete="new-password" value="${esc(tempPassword())}"><button type="button" class="button subtle small" id="new-password">Generar otra</button></div><small>Entrégasela a la persona por un canal seguro. Deberá cambiarla en su primer ingreso.</small></div>` : `<label class="check-field"><input type="checkbox" name="active"${u.active === false ? '' : ' checked'}${self ? ' disabled' : ''}> Cuenta activa</label><p class="muted admin-caption">Una cuenta inactiva no puede iniciar sesión, pero se conserva su historial. Las cuentas no se borran.</p>`}<p id="user-error" class="inline-error" role="alert" hidden></p><div class="actions"><button type="submit" class="button">${isNew ? 'Crear cuenta' : 'Guardar cambios'}</button><button type="button" class="button subtle" id="cancel-user">Cancelar</button></div></form>`;
+      return `<form id="user-form" class="profile-form panel-inset" novalidate><h3>${isNew ? 'Crear cuenta' : 'Editar cuenta'}</h3><div class="form-row"><div class="field"><label for="user-name">Nombre completo</label><input id="user-name" name="name" required minlength="3" maxlength="120" value="${esc(u.name || '')}" placeholder="Ej.: Ana Soto" autocomplete="off"></div><div class="field"><label for="user-email">Correo</label><input id="user-email" name="email" type="email" required maxlength="255" value="${esc(u.email || '')}" placeholder="ana.soto@userena.cl" autocomplete="off"></div></div><div class="field"><label for="user-login">Usuario para iniciar sesión</label><input id="user-login" name="login" required minlength="3" maxlength="60" pattern="[a-z0-9._-]+" value="${esc(u.login || '')}" placeholder="ana.soto" autocomplete="off"${isNew ? '' : ' readonly'}><small>${isNew ? 'Se completa con el correo. Solo minúsculas, números, punto, guion o guion bajo.' : 'El usuario no se puede cambiar.'}</small></div><fieldset class="profile-role"><legend>Tipo de cuenta</legend>${Object.entries(USER_ROLES).map(([value, label]) => `<label class="role-option"><input type="radio" name="role" value="${value}"${role === value ? ' checked' : ''}${self ? ' disabled' : ''}><span>${label}</span></label>`).join('')}<small id="user-role-help">${self ? 'No puedes cambiar tu propio tipo de cuenta.' : ROLE_HELP[role]}</small></fieldset><div class="field" id="user-tier-field"${role === 'agente' ? '' : ' hidden'}><label for="user-tier">Tier</label><select id="user-tier" name="tier"><option value="">Selecciona un tier</option>${[4, 3, 2, 1].map(l => `<option value="${l}"${Number(u.tier) === l ? ' selected' : ''}>${esc(tierLabel(l))}</option>`).join('')}</select><small>Atenderá y podrá resolver los casos de ese tier. El cliente verá el tier junto a sus respuestas.</small></div>${isNew ? `<div class="field"><label for="user-password">Contraseña temporal</label><div class="password-row"><input id="user-password" name="password" required minlength="8" maxlength="128" autocomplete="new-password" value="${esc(tempPassword())}"><button type="button" class="button subtle small" id="new-password">Generar otra</button></div><small>Entrégasela a la persona por un canal seguro. Puede cambiarla desde sus preferencias en GLPI.</small></div>` : `<label class="check-field"><input type="checkbox" name="active"${u.active === false ? '' : ' checked'}${self ? ' disabled' : ''}> Cuenta activa</label><p class="muted admin-caption">Una cuenta inactiva no puede iniciar sesión, pero se conserva su historial.</p>`}<p id="user-error" class="inline-error" role="alert" hidden></p><div class="actions"><button type="submit" class="button">${isNew ? 'Crear cuenta' : 'Guardar cambios'}</button><button type="button" class="button subtle" id="cancel-user">Cancelar</button></div></form>`;
     }
     function render() {
-      el.innerHTML = `<div class="panel-heading"><div><h2>Usuarios y tiers</h2><p class="muted admin-caption">Crea las cuentas de tu equipo y de los clientes. A cada agente asígnale su tier.</p></div>${editing ? '' : '<button type="button" class="button" id="new-user">＋ Crear cuenta</button>'}</div><div class="tier-legend" aria-label="Colores de los tiers">${[4, 3, 2, 1].map(l => `<span>${chip(l)} ${esc(TIERS[l].name)} · ${users.filter(u => u.role === 'agente' && Number(u.tier) === l && u.active !== false).length}</span>`).join('')}</div>${editing ? formHtml(editing) : ''}<div class="filters users-filters"><label class="visually-hidden" for="user-search">Buscar persona</label><input id="user-search" type="search" placeholder="Buscar por nombre, correo o usuario…" value="${esc(query)}"><label class="visually-hidden" for="user-role-filter">Filtrar por tipo</label><select id="user-role-filter"><option value="">Todos los tipos</option>${Object.entries(USER_ROLES).map(([v, l]) => `<option value="${v}"${roleFilter === v ? ' selected' : ''}>${l}</option>`).join('')}</select></div><div id="user-rows">${rowsHtml()}</div><p class="muted admin-caption">Los tipos de cuenta son fijos. Para crear un tipo de cuenta con permisos distintos, usa “Perfiles de GLPI” en la pestaña Accesos a GLPI.</p>`;
+      el.innerHTML = `<div class="panel-heading"><div><h2>Usuarios y tiers</h2><p class="muted admin-caption">Crea las cuentas de tu equipo y de los clientes. A cada agente asígnale su tier.</p></div>${editing ? '' : '<button type="button" class="button" id="new-user">＋ Crear cuenta</button>'}</div><div class="tier-legend" aria-label="Colores de los tiers">${[4, 3, 2, 1].map(l => `<span>${chip(l)} ${esc(TIERS[l].name)} · ${users.filter(u => u.role === 'agente' && Number(u.tier) === l && u.active !== false).length}</span>`).join('')}</div>${editing ? formHtml(editing) : ''}<div class="filters users-filters"><label class="visually-hidden" for="user-search">Buscar persona</label><input id="user-search" type="search" placeholder="Buscar por nombre, correo o usuario…" value="${esc(query)}"><label class="visually-hidden" for="user-role-filter">Filtrar por tipo</label><select id="user-role-filter"><option value="">Todos los tipos</option>${Object.entries(USER_ROLES).map(([v, l]) => `<option value="${v}"${roleFilter === v ? ' selected' : ''}>${l}</option>`).join('')}</select><label class="visually-hidden" for="user-tier-filter">Filtrar agentes por tier</label><select id="user-tier-filter"${roleFilter && roleFilter !== "agente" ? " disabled" : ""}><option value="">Todos los tiers</option>${[4, 3, 2, 1].map(tier => `<option value="${tier}"${tierFilter === String(tier) ? " selected" : ""}>${tierLabel(tier)}</option>`).join("")}</select></div><div id="user-rows">${rowsHtml()}</div><p class="muted admin-caption">Los tipos de cuenta son fijos. Para crear un tipo de cuenta con permisos distintos, usa “Perfiles de GLPI” en la pestaña Accesos a GLPI.</p>`;
       document.getElementById('user-search').oninput = event => { query = event.target.value; document.getElementById('user-rows').innerHTML = rowsHtml(); };
-      document.getElementById('user-role-filter').onchange = event => { roleFilter = event.target.value; document.getElementById('user-rows').innerHTML = rowsHtml(); };
+      document.getElementById('user-role-filter').onchange = event => { roleFilter = event.target.value; const tier = document.getElementById('user-tier-filter'); tier.disabled = !!roleFilter && roleFilter !== 'agente'; if (tier.disabled) tierFilter = tier.value = ''; document.getElementById('user-rows').innerHTML = rowsHtml(); };
+      document.getElementById('user-tier-filter').onchange = event => { tierFilter = event.target.value; document.getElementById('user-rows').innerHTML = rowsHtml(); };
       const form = document.getElementById('user-form');
       if (!form) return;
       document.getElementById('user-name').focus();
@@ -287,10 +355,22 @@
         notice(created ? `Cuenta creada para ${saved.name}. Recuerda entregarle su usuario y contraseña temporal.` : 'Cuenta actualizada.');
       }, 'user-error'); };
     }
-    el.onclick = event => {
+    el.onclick = async event => {
       const target = event.target.closest('button'); if (!target) return;
       if (target.id === 'new-user') { editing = {}; render(); }
       else if (target.dataset.editUser) { editing = users.find(u => String(u.id) === target.dataset.editUser) || null; render(); el.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
+      else if (target.dataset.deleteUser) {
+        const user = users.find(u => String(u.id) === target.dataset.deleteUser);
+        if (!user || !window.confirm(`¿Eliminar la cuenta de ${user.name}? Esta acción es permanente.`)) return;
+        target.disabled = true;
+        try {
+          await api('delete_user', { id: user.id });
+          users = users.filter(u => u.id !== user.id);
+          if (editing?.id === user.id) editing = null;
+          if (el.isConnected) { render(); notice('Cuenta eliminada.'); }
+        } catch (error) { notice(error.message, true); }
+        finally { target.disabled = false; }
+      }
     };
     render();
   }
@@ -300,7 +380,6 @@
     }
     const data = await api('schema');
     try { state.adminServices = (await api('services', undefined, { all: 1 })).services; } catch (e) { state.adminServices = []; }
-    state.services = null; // el formulario vuelve a pedir la lista para ver los cambios guardados
     if (generation !== state.generation) return;
     let revision = data.schema.revision;
     let fields = data.schema.fields.map(f => ({ ...f, options: [...f.options] }));
@@ -308,7 +387,7 @@
     const glpi = (window.ETICKET_CONFIG || {}).glpiUrl || 'http://localhost:8081';
     const nativeUrl = key => { try { const url = new URL(glpi.replace(/\/?$/, '/')); url.searchParams.set('redirect', state.user.admin_paths[key]); url.searchParams.set('noAUTO', '1'); return url.href; } catch (_) { return glpi; } };
     const nativeLink = (key, label, description) => `<a class="admin-tool" href="${esc(nativeUrl(key))}" target="_blank" rel="noopener"><strong>${label} ↗</strong><span>${description}</span></a>`;
-    main.innerHTML = `<p class="eyebrow">GESTOR ADMINISTRADOR</p><h1>Administración de Eticket</h1><p class="lead">Crea las cuentas de tu equipo con su tier, configura el formulario de solicitudes y entra a GLPI cuando lo necesites.</p><div class="admin-tabs" role="tablist" aria-label="Secciones de administración"><button type="button" role="tab" id="tab-perfiles" aria-controls="panel-perfiles" data-tab="perfiles">Usuarios y tiers</button><button type="button" role="tab" id="tab-formulario" aria-controls="panel-formulario" data-tab="formulario">Formulario de solicitudes</button><button type="button" role="tab" id="tab-glpi" aria-controls="panel-glpi" data-tab="glpi">Accesos a GLPI</button></div><div class="admin-panel" id="panel-perfiles" role="tabpanel" aria-labelledby="tab-perfiles"><section class="panel" id="profiles-section"><div class="loading">Cargando cuentas…</div></section></div><div class="admin-panel" id="panel-formulario" role="tabpanel" aria-labelledby="tab-formulario" hidden><section class="panel"><div class="panel-heading"><div><h2>Estructura de las solicitudes del portal</h2><p class="muted admin-caption">Edita los campos que ya tiene el formulario de nuevas solicitudes y agrega, ordena o quita campos adicionales.</p></div></div><p class="welcome-note">Los cambios se aplican a las nuevas solicitudes; las respuestas de tickets existentes se conservan.</p><form id="schema-form"><h3 class="schema-group">Campos base <span class="muted">· siempre aparecen en el formulario</span></h3><p class="muted admin-caption schema-group-note">Puedes cambiar sus textos. No se pueden quitar ni cambiar de tipo porque el sistema los necesita para crear la solicitud.</p><div id="schema-base"></div><h3 class="schema-group">Campos adicionales</h3><div id="schema-fields"></div><div class="actions"><button id="add-schema-field" type="button" class="button subtle">＋ Añadir campo</button><span id="schema-count" class="muted admin-caption"></span></div><p id="schema-error" class="inline-error" role="alert" hidden></p><div class="actions admin-save"><button type="submit" class="button">Guardar estructura</button><a class="button subtle" href="#/nueva">Ver formulario</a></div></form></section></div><div class="admin-panel" id="panel-glpi" role="tabpanel" aria-labelledby="tab-glpi" hidden><section class="panel"><h2>Accesos a GLPI</h2><div class="admin-tools">${nativeLink('home', 'Abrir GLPI', 'Revisa la operación y configuración completa.')}${nativeLink('profiles', 'Perfiles de GLPI', 'Para casos avanzados: crea un tipo de cuenta con permisos distintos.')}${nativeLink('users', 'Usuarios en GLPI', 'Configuración avanzada de cuentas, entidades y grupos.')}${nativeLink('forms', 'Formularios de GLPI', 'Configura formularios nativos, campos y destinos.')}</div><p class="muted admin-caption">Estos accesos abren GLPI en otra pestaña. Si te pide iniciar sesión, utiliza la misma cuenta de gestor. Las cuentas del día a día se crean en la pestaña Usuarios y tiers.</p></section></div>`;
+    main.innerHTML = `<p class="eyebrow">GESTOR ADMINISTRADOR</p><h1>Administración de Eticket</h1><p class="lead">Crea las cuentas de tu equipo con su tier, configura el formulario de solicitudes y entra a GLPI cuando lo necesites.</p><div class="admin-tabs" role="tablist" aria-label="Secciones de administración"><button type="button" role="tab" id="tab-perfiles" aria-controls="panel-perfiles" data-tab="perfiles">Usuarios y tiers</button><button type="button" role="tab" id="tab-formulario" aria-controls="panel-formulario" data-tab="formulario">Formulario de solicitudes</button><button type="button" role="tab" id="tab-glpi" aria-controls="panel-glpi" data-tab="glpi">Accesos a GLPI</button></div><div class="admin-panel" id="panel-perfiles" role="tabpanel" aria-labelledby="tab-perfiles"><section class="panel" id="profiles-section">${skeleton("Cargando cuentas", "list")}</section></div><div class="admin-panel" id="panel-formulario" role="tabpanel" aria-labelledby="tab-formulario" hidden><section class="panel"><div class="panel-heading"><div><h2>Estructura de las solicitudes del portal</h2><p class="muted admin-caption">Edita los campos que ya tiene el formulario de nuevas solicitudes y agrega, ordena o quita campos adicionales.</p></div></div><p class="welcome-note">Los cambios se aplican a las nuevas solicitudes; las respuestas de tickets existentes se conservan.</p><form id="schema-form"><h3 class="schema-group">Campos base <span class="muted">· siempre aparecen en el formulario</span></h3><p class="muted admin-caption schema-group-note">Puedes cambiar sus textos. No se pueden quitar ni cambiar de tipo porque el sistema los necesita para crear la solicitud.</p><div id="schema-base"></div><h3 class="schema-group">Campos adicionales</h3><div id="schema-fields"></div><div class="actions"><button id="add-schema-field" type="button" class="button subtle">＋ Añadir campo</button><span id="schema-count" class="muted admin-caption"></span></div><p id="schema-error" class="inline-error" role="alert" hidden></p><div class="actions admin-save"><button type="submit" class="button">Guardar estructura</button><a class="button subtle" href="#/nueva">Ver formulario</a></div></form></section></div><div class="admin-panel" id="panel-glpi" role="tabpanel" aria-labelledby="tab-glpi" hidden><section class="panel"><h2>Accesos a GLPI</h2><div class="admin-tools">${nativeLink('home', 'Abrir GLPI', 'Revisa la operación y configuración completa.')}${nativeLink('profiles', 'Perfiles de GLPI', 'Para casos avanzados: crea un tipo de cuenta con permisos distintos.')}${nativeLink('users', 'Usuarios en GLPI', 'Configuración avanzada de cuentas, entidades y grupos.')}${nativeLink('forms', 'Formularios de GLPI', 'Configura formularios nativos, campos y destinos.')}</div><p class="muted admin-caption">Estos accesos abren GLPI en otra pestaña. Si te pide iniciar sesión, utiliza la misma cuenta de gestor. Las cuentas del día a día se crean en la pestaña Usuarios y tiers.</p></section></div>`;
     // Pestañas: se recuerda la última abierta en este navegador.
     const showTab = name => { document.querySelectorAll('.admin-tabs [role=tab]').forEach(tab => { const on = tab.dataset.tab === name; tab.setAttribute('aria-selected', String(on)); tab.tabIndex = on ? 0 : -1; document.getElementById('panel-' + tab.dataset.tab).hidden = !on; }); try { sessionStorage.setItem('eticket-admin-tab', name); } catch (_) { /* Optional memory. */ } };
     document.querySelector('.admin-tabs').onclick = event => { const tab = event.target.closest('[role=tab]'); if (tab) showTab(tab.dataset.tab); };
@@ -347,8 +426,8 @@
       return `<fieldset class="base-options"><legend>Opciones de la lista</legend><p class="muted admin-caption base-options-note">Deja el nombre en blanco para usar el original. Las opciones ocultas no aparecen al crear una solicitud.</p>${list.map(s => { const own = options[s.id] || {}; const original = s.default_name || s.name; return `<div class="service-option"><div class="field"><label for="base-service-name-${esc(s.id)}">${esc(s.id)} · <span class="muted">original: ${esc(original)}</span></label><input id="base-service-name-${esc(s.id)}" value="${esc(own.name || original)}" maxlength="120" placeholder="${esc(original)}"></div><label class="check-field"><input type="checkbox" id="base-service-show-${esc(s.id)}" ${own.hidden ? '' : 'checked'}>Visible</label></div>`; }).join('')}${customServicesHtml(base.service.custom)}</fieldset>`;
     }
     function customServicesHtml(custom) {
-      const rows = custom.map(c => `<div class="service-option custom-service" data-custom="${esc(c.id)}"><div class="field"><label for="base-custom-name-${esc(c.id)}">${c.isNew ? 'Servicio nuevo <span class="new-tag">sin guardar</span>' : 'Servicio agregado'}</label><input id="base-custom-name-${esc(c.id)}" value="${esc(c.name)}" data-min="2" maxlength="120" placeholder="Ej.: Préstamo de equipos"></div><div class="field custom-type"><label for="base-custom-type-${esc(c.id)}">Tipo</label><select id="base-custom-type-${esc(c.id)}"><option value="2"${c.type === 2 ? ' selected' : ''}>Solicitud</option><option value="1"${c.type === 1 ? ' selected' : ''}>Incidente</option></select></div><label class="check-field"><input type="checkbox" id="base-custom-show-${esc(c.id)}" ${c.hidden ? '' : 'checked'}>Visible</label>${c.isNew ? `<button type="button" class="button subtle small custom-remove" data-remove-service="${esc(c.id)}" aria-label="Quitar servicio nuevo">Quitar</button>` : ''}</div>`).join('');
-      return `${rows}<div class="actions custom-add"><button type="button" class="button subtle small" id="add-service">＋ Agregar servicio</button><span class="muted admin-caption">Un servicio ya guardado no se borra, para no perder el historial de sus solicitudes. Si ya no se usa, desmárcalo como visible.</span></div>`;
+      const rows = custom.map(c => `<div class="service-option custom-service" data-custom="${esc(c.id)}"><div class="field"><label for="base-custom-name-${esc(c.id)}">${c.isNew ? 'Servicio nuevo <span class="new-tag">sin guardar</span>' : 'Servicio agregado'}</label><input id="base-custom-name-${esc(c.id)}" value="${esc(c.name)}" data-min="2" maxlength="120" placeholder="Ej.: Préstamo de equipos"></div><div class="field custom-type"><label for="base-custom-type-${esc(c.id)}">Tipo</label><select id="base-custom-type-${esc(c.id)}"><option value="2"${c.type === 2 ? ' selected' : ''}>Solicitud</option><option value="1"${c.type === 1 ? ' selected' : ''}>Incidente</option></select></div><label class="check-field"><input type="checkbox" id="base-custom-show-${esc(c.id)}" ${c.hidden ? '' : 'checked'}>Visible</label><button type="button" class="button danger small custom-remove" data-remove-service="${esc(c.id)}">Eliminar servicio</button></div>`).join('');
+      return `${rows}<div class="actions custom-add"><button type="button" class="button edit-action small" id="add-service"${custom.some(service => service.isNew) ? " disabled" : ""}>＋ Agregar servicio</button><span class="muted admin-caption">Guarda la estructura antes de agregar otro servicio. Eliminar un servicio quita su categoría de GLPI.</span></div>`;
     }
     function validateBase() {
       for (const el of document.querySelectorAll('#schema-base [data-min]')) {
@@ -368,10 +447,10 @@
     function renderBase() {
       const open = new Set([...document.querySelectorAll('#schema-base details[open]')].map(d => d.dataset.base));
       const input = (key, k, label, attrs, help) => `<div class="field"><label for="base-${key}-${k}">${label}</label>${k === 'placeholder' && key === 'description' ? `<textarea id="base-${key}-${k}" ${attrs}>${esc(base[key][k])}</textarea>` : `<input id="base-${key}-${k}" value="${esc(base[key][k])}" ${attrs}>`}${help ? `<small>${help}</small>` : ''}</div>`;
-      document.getElementById('schema-base').innerHTML = Object.entries(base).map(([key, value]) => `<details class="schema-field base-field" data-base="${key}"${open.has(key) ? ' open' : ''}><summary><span class="base-field-name">${BASE_FIELDS[key].name}</span><span class="base-field-label">${esc(value.label)}</span><span class="base-field-edit">Editar</span></summary><div class="base-field-body"><p class="muted admin-caption">${BASE_FIELDS[key].note}</p>${input(key, 'label', 'Pregunta o nombre del campo', 'data-min="2" maxlength="120"')}${'placeholder' in value ? input(key, 'placeholder', 'Texto de ejemplo dentro del campo', 'maxlength="200"', 'Se ve en gris mientras el campo está vacío. Puede quedar en blanco.') : ''}${input(key, 'hint', 'Texto de ayuda bajo el campo', 'maxlength="200"', 'Puede quedar en blanco.')}${value.list ? `<div class="field"><label for="base-${key}-list">Opciones de la lista, una por línea</label><textarea id="base-${key}-list" maxlength="2500">${esc(value.list.join('\n'))}</textarea><small>Entre 2 y 20 opciones.</small></div>` : ''}${key === 'service' ? serviceOptionsHtml(value.options) : value.options ? `<fieldset class="base-options"><legend>Opciones de impacto, de menor a mayor</legend>${Object.entries(value.options).map(([level, text], i) => `<div class="field"><label for="base-${key}-option-${level}">Nivel ${i + 1}</label><input id="base-${key}-option-${level}" value="${esc(text)}" data-min="2" maxlength="120"></div>`).join('')}</fieldset>` : ''}<div class="actions"><button type="button" class="button subtle small" data-reset-base="${key}">Restablecer textos originales</button></div></div></details>`).join('');
+      document.getElementById('schema-base').innerHTML = Object.entries(base).map(([key, value]) => `<details class="schema-field base-field" data-base="${key}"${open.has(key) ? ' open' : ''}><summary><span class="base-field-name">${BASE_FIELDS[key].name}</span><span class="base-field-label">${esc(value.label)}</span><span class="base-field-edit">Editar</span></summary><div class="base-field-body"><p class="muted admin-caption">${BASE_FIELDS[key].note}</p>${input(key, 'label', 'Pregunta o nombre del campo', 'data-min="2" maxlength="120"')}${'placeholder' in value ? input(key, 'placeholder', 'Texto de ejemplo dentro del campo', 'maxlength="200"', 'Se ve en gris mientras el campo está vacío. Puede quedar en blanco.') : ''}${input(key, 'hint', 'Texto de ayuda bajo el campo', 'maxlength="200"', 'Puede quedar en blanco.')}${value.list ? `<div class="field"><label for="base-${key}-list">Opciones de la lista, una por línea</label><textarea id="base-${key}-list" maxlength="2419">${esc(value.list.join('\n'))}</textarea><small>Entre 2 y 20 opciones.</small></div>` : ''}${key === 'service' ? serviceOptionsHtml(value.options) : value.options ? `<fieldset class="base-options"><legend>Opciones de impacto, de menor a mayor</legend>${Object.entries(value.options).map(([level, text], i) => `<div class="field"><label for="base-${key}-option-${level}">Nivel ${i + 1}</label><input id="base-${key}-option-${level}" value="${esc(text)}" data-min="2" maxlength="120"></div>`).join('')}</fieldset>` : ''}<div class="actions"><button type="button" class="button restore-action small" data-reset-base="${key}">Restablecer textos originales</button></div></div></details>`).join('');
     }
     function renderFields() {
-      document.getElementById('schema-fields').innerHTML = fields.length ? fields.map((f, index) => `<fieldset class="schema-field"><legend>Campo ${index + 1}</legend><div class="form-row"><div class="field"><label for="label-${f.id}">Nombre del campo</label><input id="label-${f.id}" value="${esc(f.label)}" required minlength="2" maxlength="120" placeholder="Ej.: Proyecto relacionado"></div><div class="field"><label for="type-${f.id}">Tipo de respuesta</label><select id="type-${f.id}" data-field-type="${f.id}"><option value="text" ${f.type === 'text' ? 'selected' : ''}>Texto corto</option><option value="textarea" ${f.type === 'textarea' ? 'selected' : ''}>Texto largo</option><option value="select" ${f.type === 'select' ? 'selected' : ''}>Lista de opciones</option></select></div></div><div class="field" ${f.type === 'select' ? '' : 'hidden'}><label for="options-${f.id}">Opciones, una por línea</label><textarea id="options-${f.id}" maxlength="2500" ${f.type === 'select' ? 'required' : ''}>${esc(f.options.join('\n'))}</textarea><small>Entre 2 y 20 opciones distintas.</small></div><div class="schema-field-actions"><label class="check-field"><input type="checkbox" id="required-${f.id}" ${f.required ? 'checked' : ''}>Respuesta obligatoria</label><div class="actions"><button type="button" class="button subtle small" data-move="up" data-id="${f.id}" ${index === 0 ? 'disabled' : ''} aria-label="Subir campo ${index + 1}">↑</button><button type="button" class="button subtle small" data-move="down" data-id="${f.id}" ${index === fields.length - 1 ? 'disabled' : ''} aria-label="Bajar campo ${index + 1}">↓</button><button type="button" class="button subtle small" data-remove="${f.id}" aria-label="Quitar campo ${index + 1}">Quitar campo</button></div></div></fieldset>`).join('') : '<p class="muted">No hay campos adicionales. El formulario utiliza los campos base.</p>';
+      document.getElementById('schema-fields').innerHTML = fields.length ? fields.map((f, index) => `<fieldset class="schema-field"><legend>Campo ${index + 1}</legend><div class="form-row"><div class="field"><label for="label-${f.id}">Nombre del campo</label><input id="label-${f.id}" value="${esc(f.label)}" required minlength="2" maxlength="120" placeholder="Ej.: Proyecto relacionado"></div><div class="field"><label for="type-${f.id}">Tipo de respuesta</label><select id="type-${f.id}" data-field-type="${f.id}"><option value="text" ${f.type === 'text' ? 'selected' : ''}>Texto corto</option><option value="textarea" ${f.type === 'textarea' ? 'selected' : ''}>Texto largo</option><option value="select" ${f.type === 'select' ? 'selected' : ''}>Lista de opciones</option></select></div></div><div class="field" ${f.type === 'select' ? '' : 'hidden'}><label for="options-${f.id}">Opciones, una por línea</label><textarea id="options-${f.id}" maxlength="2500" ${f.type === 'select' ? 'required' : ''}>${esc(f.options.join('\n'))}</textarea><small>Entre 2 y 20 opciones distintas.</small></div><div class="schema-field-actions"><label class="check-field"><input type="checkbox" id="required-${f.id}" ${f.required ? 'checked' : ''}>Respuesta obligatoria</label><div class="actions"><button type="button" class="button subtle small" data-move="up" data-id="${f.id}" ${index === 0 ? 'disabled' : ''} aria-label="Subir campo ${index + 1}">↑</button><button type="button" class="button subtle small" data-move="down" data-id="${f.id}" ${index === fields.length - 1 ? 'disabled' : ''} aria-label="Bajar campo ${index + 1}">↓</button><button type="button" class="button danger small" data-remove="${f.id}" aria-label="Quitar campo ${index + 1}">Quitar campo</button></div></div></fieldset>`).join('') : '<p class="muted">No hay campos adicionales. El formulario utiliza los campos base.</p>';
       document.getElementById('schema-count').textContent = fields.length + ' de 20 campos';
       document.getElementById('add-schema-field').disabled = fields.length >= 20;
     }
@@ -395,7 +474,7 @@
       event.preventDefault(); submit(event.currentTarget, async () => { collect(); collectBase(); validateBase(); const toSend = { ...base, service: { ...base.service, custom: base.service.custom.map(({ isNew, ...c }) => c) } }; const saved = await api('save_schema', { revision, fields, base: toSend }); revision = saved.schema.revision; fields = saved.schema.fields; renderFields(); if (saved.schema.base) { base = baseOf(saved.schema); renderBase(); notice('Estructura guardada. Los cambios están disponibles para las nuevas solicitudes.'); } else notice('Se guardaron los campos adicionales, pero el servidor todavía no guarda los cambios de los campos base.', true); }, 'schema-error');
     };
     document.getElementById('schema-base').onclick = event => {
-      if (event.target.closest('#add-service')) {
+      if (event.target.closest('#add-service') && !base.service.custom.some(service => service.isNew)) {
         collectBase(); base.service.custom.push({ id: 'custom_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12), name: '', type: 2, hidden: false, isNew: true }); renderBase();
         document.getElementById('base-custom-name-' + base.service.custom.at(-1).id).focus(); return;
       }
@@ -416,32 +495,67 @@
   async function tickets(generation) {
     const heading = { cliente: 'Mis solicitudes', agente: 'Solicitudes asignadas', gestor: 'Todas las solicitudes' }[state.user.role] || 'Solicitudes';
     const lead = { agente: 'Los casos asignados a ti o a tu equipo, con su nivel de atención.', gestor: 'Supervisa todos los casos, su nivel y los que necesitan tu intervención.' }[state.user.role] || 'Todo lo que necesitas para seguir cada caso.';
-    main.innerHTML = `<div class="page-head"><div><p class="eyebrow">CONVERSACIONES</p><h1>${heading}</h1><p class="lead">${lead}</p></div>${canCreate() ? '<a class="button" href="#/nueva">＋ Crear solicitud</a>' : ''}</div><section class="panel"><form id="filter-form" class="filters" role="search"><label class="visually-hidden" for="search">Buscar por asunto o número</label><input id="search" type="search" placeholder="Buscar por asunto o número…" value="${esc(state.query)}" maxlength="120"><label class="visually-hidden" for="status-filter">Filtrar por estado</label><select id="status-filter"><option value="">Todos los estados</option>${['Recibida', 'En curso', 'Planificada', 'En espera', 'Resuelta', 'Cerrada'].map((s, i) => `<option value="${i + 1}"${state.status === String(i + 1) ? ' selected' : ''}>${s}</option>`).join('')}</select><button type="submit" class="button subtle">Buscar</button></form><div id="ticket-results" class="loading" aria-live="polite">Cargando solicitudes…</div><div id="pagination"></div></section>`;
-    document.getElementById('filter-form').onsubmit = event => { event.preventDefault(); state.query = document.getElementById('search').value.trim(); state.status = document.getElementById('status-filter').value; state.offset = 0; route(); };
-    const data = await api('tickets', undefined, { q: state.query, status: state.status, offset: state.offset });
-    if (generation !== state.generation) return;
-    const results = document.getElementById('ticket-results'); results.className = 'ticket-list'; results.innerHTML = ticketCards(data.tickets);
-    document.getElementById('pagination').innerHTML = `<div class="pagination"><button class="button subtle small" id="previous" ${state.offset === 0 ? 'disabled' : ''}>← Anterior</button><span>Página ${state.offset / 20 + 1}</span><button class="button subtle small" id="next" ${!data.has_more ? 'disabled' : ''}>Siguiente →</button></div>`;
-    document.getElementById('previous').onclick = () => { state.offset = Math.max(0, state.offset - 20); route(); };
-    document.getElementById('next').onclick = () => { state.offset += 20; route(); };
+    main.innerHTML = `<div class="page-head"><div><p class="eyebrow">CONVERSACIONES</p><h1>${heading}</h1><p class="lead">${lead}</p></div>${canCreate() ? '<a class="button" href="#/nueva">＋ Crear solicitud</a>' : ''}</div><section class="panel"><form id="filter-form" class="filters" role="search"><label class="visually-hidden" for="search">Buscar por asunto o número</label><input id="search" type="search" placeholder="Buscar por asunto o número…" value="${esc(state.query)}" maxlength="120"><label class="visually-hidden" for="status-filter">Filtrar por estado</label><select id="status-filter"><option value="">Todos los estados</option>${['Recibida', 'En curso', 'Planificada', 'En espera', 'Resuelta', 'Cerrada'].map((s, i) => `<option value="${i + 1}"${state.status === String(i + 1) ? ' selected' : ''}>${s}</option>`).join('')}</select><button type="submit" class="button subtle">Buscar</button><button id="clear-filters" type="button" class="button subtle">Limpiar filtros</button></form><div id="ticket-results"></div><div id="pagination"></div></section>`;
+    const form = document.getElementById('filter-form');
+    const search = document.getElementById('search');
+    const status = document.getElementById('status-filter');
+    const clear = document.getElementById('clear-filters');
+    const results = document.getElementById('ticket-results');
+    const pagination = document.getElementById('pagination');
+    let request = 0;
+
+    async function loadResults() {
+      const current = ++request;
+      const { query, status, offset } = state;
+      clear.disabled = !query && !status && !search.value;
+      results.innerHTML = skeleton('Cargando solicitudes', 'list');
+      pagination.replaceChildren();
+      try {
+        const data = await api('tickets', undefined, { q: query, status, offset });
+        if (generation !== state.generation || current !== request) return;
+        const filtered = query || status;
+        results.innerHTML = `<p class="visually-hidden" role="status">${data.tickets.length} solicitudes en esta p?gina.</p><div class="ticket-list">${filtered && !data.tickets.length ? '<div class="empty"><h2>No hay coincidencias</h2><p>Cambia los filtros o l?mpialos para ver todas las solicitudes.</p></div>' : ticketCards(data.tickets)}</div>`;
+        if (!offset && !data.has_more) return;
+        pagination.innerHTML = `<div class="pagination"><button class="button subtle small" id="previous" ${offset === 0 ? 'disabled' : ''}>← Anterior</button><span>Página ${offset / 20 + 1}</span><button class="button subtle small" id="next" ${!data.has_more ? 'disabled' : ''}>Siguiente →</button></div>`;
+        pagination.querySelector('#previous').onclick = () => { state.offset = offset - 20; loadResults(); };
+        pagination.querySelector('#next').onclick = () => { state.offset = offset + 20; loadResults(); };
+      } catch (error) {
+        if (generation !== state.generation || current !== request) return;
+        results.innerHTML = `<div class="empty"><p role="alert">${esc(error.message)}</p><button type="button" class="button subtle">Reintentar</button></div>`;
+        results.querySelector('button').onclick = loadResults;
+      }
+    }
+
+    function applyFilters() {
+      state.query = search.value.trim();
+      state.status = status.value;
+      state.offset = 0;
+      loadResults();
+    }
+    form.onsubmit = event => { event.preventDefault(); applyFilters(); };
+    search.oninput = () => {
+      clear.disabled = !search.value && !state.query && !status.value;
+      if (!search.value && state.query) applyFilters();
+    };
+    status.onchange = applyFilters;
+    clear.onclick = () => { search.value = ''; status.value = ''; applyFilters(); search.focus(); };
+    await loadResults();
   }
   async function newTicket(generation) {
     if (!canCreate()) { main.innerHTML = state.user.role === 'gestor' ? '<section class="panel"><h1>El gestor no crea solicitudes</h1><p>Supervisas todas las solicitudes y puedes intervenir en cualquiera cuando lo estimes necesario.</p><a class="button" href="#/tickets">Ver todas las solicitudes</a></section>' : '<section class="panel"><h1>Tu perfil es de atención</h1><p>Atiende las solicitudes asignadas desde tu bandeja: responde, cambia su estado, resuélvelas o derívalas.</p><a class="button" href="#/tickets">Ver solicitudes</a></section>'; return; }
-    if (!state.services) state.services = (await api('services')).services;
-    const schema = (await api('schema')).schema;
+    const [{ services: catalog }, { schema }] = await Promise.all([api('services'), api('schema')]);
     if (generation !== state.generation) return;
     const b = baseOf(schema);
-    // El formulario depende del cuadrado elegido en el inicio y no se puede cambiar aquí.
     // En GLPI, "Quiero un servicio" es una solicitud (tipo 2) y "Tengo un problema" es un incidente (tipo 1).
     const intent = INTENTS[state.intent] ? state.intent : 'problema';
     const isService = intent === 'servicio';
     const wantedType = isService ? 2 : 1;
-    const services = state.services.filter(s => !(b.service.options[s.id] || {}).hidden && Number(s.type || 2) === wantedType);
+    const services = catalog.filter(s => Number(s.type || 2) === wantedType);
     const extra = isService ? { key: 'kind', prefix: 'Tipo de solución' } : { key: 'problem', prefix: 'Qué está fallando' };
     const ef = b[extra.key];
     const listField = `<div class="field"><label for="extra-choice">${esc(ef.label)}</label><select id="extra-choice" required><option value="">Selecciona una opción</option>${ef.list.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}</select>${hintHtml(ef.hint)}</div>`;
     const urgencyField = isService ? '' : `<div class="field"><label for="urgency">${esc(b.urgency.label)}</label><select name="urgency" id="urgency">${Object.entries(b.urgency.options).map(([level, text]) => `<option value="${level}"${level === '3' ? ' selected' : ''}>${esc(text)}</option>`).join('')}</select>${hintHtml(b.urgency.hint)}</div>`;
-    main.innerHTML = `<a class="breadcrumb" href="#/inicio">← Volver al inicio</a><p class="eyebrow">ESTAMOS PARA AYUDARTE</p><h1>${isService ? 'Pide un servicio' : 'Cuéntanos qué está fallando'}</h1><p class="lead">${isService ? 'Cuéntanos qué necesitas. Recibirás un número para seguir tu solicitud desde aquí.' : 'Describe el problema. Recibirás un número para seguir tu solicitud desde aquí.'}</p><div class="steps"><span><b>1</b> ${isService ? 'Elige el servicio' : 'Elige el tipo de problema'}</span><span><b>2</b> Describe tu solicitud</span><span><b>3</b> Envíala y sigue los avances</span></div><div class="form-layout"><form class="panel" id="create-form"><p class="intent-chip intent-fixed">Elegiste: <strong>${INTENTS[intent]}</strong></p><div class="field"><label for="service">${isService ? esc(b.service.label) : '¿Qué tipo de problema es?'}</label><select name="service" id="service" required>${services.length === 1 ? '' : '<option value="">Selecciona una opción</option>'}${services.map(s => `<option value="${esc(s.id)}">${esc((b.service.options[s.id] || {}).name || s.name)}</option>`).join('')}</select>${hintHtml(isService ? b.service.hint : 'Si alguien podría estar accediendo a datos o cuentas sin permiso, elige el incidente de seguridad.', 'service-hint')}</div>${listField}<div class="field"><label for="title">${esc(b.title.label)}</label><input name="title" id="title" required minlength="4" maxlength="200" placeholder="${esc(b.title.placeholder)}">${hintHtml(b.title.hint)}</div><div class="field"><label for="description">${esc(b.description.label)}</label><textarea name="description" id="description" required minlength="10" maxlength="20000" placeholder="${esc(b.description.placeholder)}"></textarea>${hintHtml(b.description.hint)}</div>${urgencyField}${fileField}<p id="create-error" class="inline-error" role="alert" hidden></p><div class="actions"><button type="submit" class="button">Enviar solicitud →</button><a class="button subtle" href="#/inicio">Cancelar</a></div></form><aside class="panel form-hints"><span class="choice-icon" aria-hidden="true">?</span><h2>Una buena descripción ayuda</h2><ul>${isService ? '<li>Explica qué necesitas lograr y para cuándo.</li><li>Menciona el proyecto o la unidad relacionada.</li><li>Si tienes un ejemplo o referencia, adjúntalo.</li>' : '<li>Explica desde cuándo ocurre y a quién afecta.</li><li>Cuenta qué estabas haciendo cuando falló.</li><li>Agrega una captura del error, si la tienes.</li>'}<li>No incluyas claves ni información sensible.</li></ul><p>Después de enviar, podrás agregar más información en la conversación.</p></aside></div>`;
+    main.innerHTML = `<a class="breadcrumb" href="#/inicio">← Volver al inicio</a><p class="eyebrow">ESTAMOS PARA AYUDARTE</p><h1>${isService ? 'Pide un servicio' : 'Cuéntanos qué está fallando'}</h1><p class="lead">${isService ? 'Cuéntanos qué necesitas. Recibirás un número para seguir tu solicitud desde aquí.' : 'Describe el problema. Recibirás un número para seguir tu solicitud desde aquí.'}</p><div class="steps"><span><b>1</b> ${isService ? 'Elige el servicio' : 'Elige el tipo de problema'}</span><span><b>2</b> Describe tu solicitud</span><span><b>3</b> Envíala y sigue los avances</span></div><div class="form-layout"><form class="panel" id="create-form"><p class="intent-chip intent-fixed">Elegiste: <strong>${INTENTS[intent]}</strong> · <a href="#/nueva/${isService ? 'problema' : 'servicio'}">${isService ? 'Reportar un problema' : 'Pedir un servicio'}</a></p><div class="field"><label for="service">${isService ? esc(b.service.label) : '¿Qué tipo de problema es?'}</label><select name="service" id="service" required>${services.length === 1 ? '' : '<option value="">Selecciona una opción</option>'}${services.map(s => `<option value="${esc(s.id)}">${esc((b.service.options[s.id] || {}).name || s.name)}</option>`).join('')}</select>${hintHtml(isService ? b.service.hint : 'Si alguien podría estar accediendo a datos o cuentas sin permiso, elige el incidente de seguridad.', 'service-hint')}</div>${listField}<div class="field"><label for="title">${esc(b.title.label)}</label><input name="title" id="title" required minlength="4" maxlength="200" placeholder="${esc(b.title.placeholder)}">${hintHtml(b.title.hint)}</div><div class="field"><label for="description">${esc(b.description.label)}</label><textarea name="description" id="description" required minlength="10" maxlength="20000" placeholder="${esc(b.description.placeholder)}"></textarea>${hintHtml(b.description.hint)}</div>${urgencyField}${fileField}<p id="create-error" class="inline-error" role="alert" hidden></p><div class="actions"><button type="submit" class="button">Enviar solicitud →</button><a class="button subtle" href="#/inicio">Cancelar</a></div></form><aside class="panel form-hints"><span class="choice-icon" aria-hidden="true">?</span><h2>Una buena descripción ayuda</h2><ul>${isService ? '<li>Explica qué necesitas lograr y para cuándo.</li><li>Menciona el proyecto o la unidad relacionada.</li><li>Si tienes un ejemplo o referencia, adjúntalo.</li>' : '<li>Explica desde cuándo ocurre y a quién afecta.</li><li>Cuenta qué estabas haciendo cuando falló.</li><li>Agrega una captura del error, si la tienes.</li>'}<li>No incluyas claves ni información sensible.</li></ul><p>Después de enviar, podrás agregar más información en la conversación.</p></aside></div>`;
     const additional = document.createElement('div'); additional.id = 'additional-fields';
     additional.innerHTML = schema.fields.map(f => `<div class="field"><label for="${f.id}">${esc(f.label)} ${f.required ? '' : '<span class="muted">(opcional)</span>'}</label>${f.type === 'textarea' ? `<textarea id="${f.id}" maxlength="4000" ${f.required ? 'required' : ''}></textarea>` : f.type === 'select' ? `<select id="${f.id}" ${f.required ? 'required' : ''}><option value="">Selecciona una opción</option>${f.options.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}</select>` : `<input id="${f.id}" maxlength="255" ${f.required ? 'required' : ''}>`}</div>`).join('');
     document.getElementById('file').closest('.field').before(additional);
@@ -523,12 +637,12 @@
     let html = '';
     if (p.escalate && TIERS[level - 1]) {
       const next = level - 1;
-      html += `<section class="panel escalate-panel tier-accent-${next}"><h2>Derivar al siguiente tier</h2><p class="muted">Si el caso supera la capacidad de este nivel, derívalo a ${chip(next)} <strong>${esc(TIERS[next].name)}</strong>. Se conservan el número, el historial y los archivos.</p><form id="escalate-form"><div class="field"><label for="escalate-reason">Motivo</label><textarea id="escalate-reason" name="reason" required minlength="10" maxlength="4000" placeholder="Qué se revisó, qué se intentó y por qué se necesita un nivel más especializado."></textarea><small>Queda registrado con tu nombre y la fecha. El cliente ve el cambio de tier, pero no este motivo.</small></div><p id="escalate-error" class="inline-error" role="alert" hidden></p><button type="submit" class="button dark">Derivar a ${esc(TIERS[next].label)} <span aria-hidden="true">↑</span></button></form></section>`;
+      html += `<section class="panel escalate-panel tier-accent-${next}"><h2>Derivar al siguiente tier</h2><p class="muted">Si el caso supera la capacidad de este nivel, derívalo a ${chip(next)} <strong>${esc(TIERS[next].name)}</strong>. Se conservan el número, el historial y los archivos.</p><form id="escalate-form"><div class="field"><label for="escalate-reason">Motivo</label><textarea id="escalate-reason" name="reason" required minlength="10" maxlength="2000" placeholder="Qué se revisó, qué se intentó y por qué se necesita un nivel más especializado."></textarea><small>Queda registrado con tu nombre y la fecha. El cliente ve el cambio de tier, pero no este motivo.</small></div><p id="escalate-error" class="inline-error" role="alert" hidden></p><button type="submit" class="button dark">Derivar a ${esc(TIERS[next].label)} <span aria-hidden="true">↑</span></button></form></section>`;
     } else if (isStaff() && level === 1 && state.user.role === 'agente') {
       html += `<section class="panel tier-last-note tier-accent-1"><h2>${chip(1)} Último nivel</h2><p class="muted">Tier I no deriva ni bloquea casos. Si tu solución no funciona o el cliente la rechaza, el caso vuelve a ti para que lo intentes de nuevo. El gestor puede intervenir si lo estima necesario.</p></section>`;
     }
     if (p.reassign) {
-      html += `<details class="panel intervene-panel"><summary><span><strong>Intervenir como gestor</strong><small>Opcional. Mueve el caso a cualquier tier.</small></span></summary><form id="reassign-form"><div class="field"><label for="reassign-level">Nuevo tier</label><select id="reassign-level" name="level" required><option value="">Selecciona un tier</option>${[4, 3, 2, 1].map(l => `<option value="${l}"${l === level ? ' disabled' : ''}>${esc(tierLabel(l))}${l === level ? ' (actual)' : ''}</option>`).join('')}</select></div><div class="field"><label for="reassign-reason">Motivo</label><textarea id="reassign-reason" name="reason" required minlength="10" maxlength="4000" placeholder="Por qué mueves el caso."></textarea><small>Queda registrado en el historial. También puedes responder o registrar la solución tú mismo desde la conversación.</small></div><p id="reassign-error" class="inline-error" role="alert" hidden></p><button type="submit" class="button dark">Mover caso</button></form></details>`;
+      html += `<details class="panel intervene-panel"><summary><span><strong>Intervenir como gestor</strong><small>Opcional. Mueve el caso a cualquier tier.</small></span></summary><form id="reassign-form"><div class="field"><label for="reassign-level">Nuevo tier</label><select id="reassign-level" name="level" required><option value="">Selecciona un tier</option>${[4, 3, 2, 1].map(l => `<option value="${l}"${l === level ? ' disabled' : ''}>${esc(tierLabel(l))}${l === level ? ' (actual)' : ''}</option>`).join('')}</select></div><div class="field"><label for="reassign-reason">Motivo</label><textarea id="reassign-reason" name="reason" required minlength="10" maxlength="2000" placeholder="Por qué mueves el caso."></textarea><small>Queda registrado en el historial. También puedes responder o registrar la solución tú mismo desde la conversación.</small></div><p id="reassign-error" class="inline-error" role="alert" hidden></p><button type="submit" class="button dark">Mover caso</button></form></details>`;
     }
     return html;
   }
@@ -537,6 +651,11 @@
     if (escalate) escalate.onsubmit = event => { event.preventDefault(); submit(escalate, async () => {
       const body = Object.fromEntries(new FormData(escalate));
       const data = await api('escalate', body, { id: t.id });
+      if (!data.ticket) {
+        state.flash = 'Caso derivado a ' + tierLabel(tierLevel(t) - 1) + '.';
+        window.location.hash = '#/tickets';
+        return;
+      }
       renderDetail(data.ticket); notice('Caso derivado a ' + tierLabel(tierLevel(data.ticket)) + '.');
     }, 'escalate-error'); };
     const reassign = document.getElementById('reassign-form');
@@ -558,7 +677,7 @@
   }
   function renderDetail(t) {
     state.ticket = t; const p = t.permissions;
-    main.innerHTML = `<a class="breadcrumb" href="#/tickets">← Volver a solicitudes</a><div class="page-head detail-head"><div><p class="eyebrow">SOLICITUD #${t.id}</p><h1>${esc(t.title)}</h1><p class="lead">Creada el ${esc(date(t.created_at))}</p></div><div class="actions">${tierChip(t)}${badge(t)}<button id="refresh-ticket" class="button subtle small">Actualizar</button></div></div>${p.approve ? '<section class="approve-box"><h2>El equipo publicó una solución</h2><p>Revisa la respuesta. Puedes confirmar que está resuelto o indicar qué falta.</p><div class="actions"><button id="approve-solution" class="button">Sí, está resuelto</button><button id="reject-solution" class="button subtle">Necesito más ayuda</button></div><form id="reject-form" hidden style="margin-top:20px"><div class="field"><label for="reject-message">Cuéntanos qué falta por resolver</label><textarea id="reject-message" name="message" required minlength="5" maxlength="20000"></textarea></div><button type="submit" class="button">Enviar y reabrir solicitud</button></form></section>' : ''}<div class="detail-grid"><div>${p.edit ? `<section class="panel"><div class="panel-heading"><h2>Asunto y descripción</h2><button id="show-edit" class="button subtle small">Editar</button></div><p id="ticket-description" class="muted edit-hint">La descripción original aparece como primer mensaje de la conversación.</p>${p.edit ? `<form id="edit-form" hidden><div class="field"><label for="edit-title">Asunto</label><input id="edit-title" name="title" value="${esc(t.title)}" minlength="4" maxlength="200" required></div><div class="field"><label for="edit-description">Descripción</label><textarea id="edit-description" name="description" required minlength="10" maxlength="20000">${esc(t.description)}</textarea></div>${t.status <= 4 && !p.status ? `<div class="field"><label for="edit-status">Estado</label><select id="edit-status" name="status">${['Recibida','En curso','Planificada','En espera'].map((s, i) => `<option value="${i+1}" ${t.status === i+1 ? 'selected' : ''}>${s}</option>`).join('')}</select></div>` : ''}<p id="edit-error" role="alert" class="inline-error" hidden></p><div class="actions"><button type="submit" class="button">Guardar cambios</button><button id="cancel-edit" type="button" class="button subtle">Cancelar</button></div></form>` : ''}</section>` : ''}<section class="panel"><div class="panel-heading"><h2>Conversación</h2><small>${t.messages.length + 1} ${t.messages.length === 0 ? 'mensaje' : 'mensajes'}</small></div><div class="thread">${[initialMessage(t), ...[...t.messages, ...tierEvents(t)].sort((a, b) => String(a.date).localeCompare(String(b.date)))].map(m => messageHtml(m, t)).join('')}</div>${t.messages.length ? '' : '<p class="muted thread-empty">Tu solicitud fue recibida. Las respuestas del equipo aparecerán aquí.</p>'}${p.reply ? `<form id="reply-form" class="reply-form"><div class="field"><label for="message">Agregar una respuesta</label><textarea id="message" name="message" required maxlength="20000" placeholder="Escribe tu respuesta o agrega información sobre el caso…"></textarea></div>${p.private_reply ? '<label class="check-field"><input type="checkbox" id="private-reply" name="private" value="1"> Nota interna: visible solo para el equipo autorizado</label>' : ''}${fileField}<p id="reply-error" role="alert" class="inline-error" hidden></p><button type="submit" class="button">Enviar respuesta →</button></form>` : `<p class="welcome-note">${t.status === 6 ? 'Esta solicitud está cerrada. Si necesitas ayuda con un caso nuevo, crea otra solicitud.' : 'Tu perfil no permite agregar respuestas en este estado.'}</p>`}</section>${p.solve ? '<section class="panel"><h2>Proponer una solución</h2><p class="muted">La solución quedará visible para el cliente, que podrá revisarla.</p><form id="solve-form"><div class="field"><label for="solution">Qué se resolvió y cómo</label><textarea id="solution" name="message" required minlength="10" maxlength="20000"></textarea></div><p id="solve-error" class="inline-error" role="alert" hidden></p><button type="submit" class="button">Registrar solución</button></form></section>' : ''}</div><aside><section class="panel"><h2>Detalles</h2><dl class="meta-list"><div><dt>Estado</dt><dd>${esc(t.status_label)}</dd></div>${tierRow(t)}<div><dt>Solicitante</dt><dd>${esc(t.requesters.join(', '))}</dd></div><div><dt>Última actividad</dt><dd>${esc(date(t.updated_at))}</dd></div><div><dt>Tipo</dt><dd>${t.type === 1 ? 'Incidente' : 'Solicitud de servicio'}</dd></div></dl>${statusForm(t)}${p.delete ? '<div class="danger-zone"><button id="delete-ticket">Enviar a la papelera</button></div>' : ''}</section>${sidePanels(t)}<section class="panel"><h2>Archivos adjuntos</h2>${t.attachments.length ? `<ul class="attachment-list">${t.attachments.map(a => `<li><a href="api?action=download&amp;id=${t.id}&amp;document=${a.id}" download>↓ ${esc(a.name)}</a></li>`).join('')}</ul>` : '<small>No hay archivos adjuntos.</small>'}</section></aside></div>`;
+    main.innerHTML = `<a class="breadcrumb" href="#/tickets">← Volver a solicitudes</a><div class="page-head detail-head"><div><p class="eyebrow">SOLICITUD #${t.id}</p><h1>${esc(t.title)}</h1><p class="lead">Creada el ${esc(date(t.created_at))}</p></div><div class="actions">${tierChip(t)}${badge(t)}<button id="refresh-ticket" class="button subtle small">Actualizar</button></div></div>${p.approve ? '<section class="approve-box"><h2>El equipo publicó una solución</h2><p>Revisa la respuesta. Puedes confirmar que está resuelto o indicar qué falta.</p><div class="actions"><button id="approve-solution" class="button">Sí, está resuelto</button><button id="reject-solution" class="button subtle">Necesito más ayuda</button></div><form id="reject-form" hidden style="margin-top:20px"><div class="field"><label for="reject-message">Cuéntanos qué falta por resolver</label><textarea id="reject-message" name="message" required minlength="5" maxlength="20000"></textarea></div><button type="submit" class="button">Enviar y reabrir solicitud</button></form></section>' : ''}<div class="detail-grid"><div>${p.edit ? `<section class="panel"><div class="panel-heading"><h2>Asunto y descripción</h2><button id="show-edit" class="button subtle small">Editar</button></div><p id="ticket-description" class="muted edit-hint">La descripción original aparece como primer mensaje de la conversación.</p>${p.edit ? `<form id="edit-form" hidden><div class="field"><label for="edit-title">Asunto</label><input id="edit-title" name="title" value="${esc(t.title)}" minlength="4" maxlength="200" required></div><div class="field"><label for="edit-description">Descripción</label><textarea id="edit-description" name="description" required minlength="10" maxlength="20000">${esc(t.description)}</textarea></div>${t.status <= 4 && !p.status ? `<div class="field"><label for="edit-status">Estado</label><select id="edit-status" name="status">${['Recibida','En curso','Planificada','En espera'].map((s, i) => `<option value="${i+1}" ${t.status === i+1 ? 'selected' : ''}>${s}</option>`).join('')}</select></div>` : ''}<p id="edit-error" role="alert" class="inline-error" hidden></p><div class="actions"><button type="submit" class="button">Guardar cambios</button><button id="cancel-edit" type="button" class="button subtle">Cancelar</button></div></form>` : ''}</section>` : ''}<section class="panel"><div class="panel-heading"><h2>Conversación</h2><small>${t.messages.length + 1} ${t.messages.length === 0 ? 'mensaje' : 'mensajes'}</small></div><div class="thread">${[initialMessage(t), ...[...t.messages, ...tierEvents(t)].sort((a, b) => String(a.date).localeCompare(String(b.date)))].map(m => messageHtml(m, t)).join('')}</div>${t.messages.length ? '' : '<p class="muted thread-empty">Tu solicitud fue recibida. Las respuestas del equipo aparecerán aquí.</p>'}${p.reply ? `<form id="reply-form" class="reply-form"><div class="field"><label for="message">Agregar una respuesta</label><textarea id="message" name="message" required maxlength="20000" placeholder="Escribe tu respuesta o agrega información sobre el caso…"></textarea></div>${p.private_reply ? '<label class="check-field"><input type="checkbox" id="private-reply" name="private" value="1"> Nota interna: visible solo para el equipo autorizado</label>' : ''}${fileField}<p id="reply-error" role="alert" class="inline-error" hidden></p><button type="submit" class="button">Enviar respuesta →</button></form>` : `<p class="welcome-note">${t.status === 6 ? 'Esta solicitud está cerrada. Si necesitas ayuda con un caso nuevo, crea otra solicitud.' : 'Tu perfil no permite agregar respuestas en este estado.'}</p>`}</section>${p.solve ? '<section class="panel"><h2>Proponer una solución</h2><p class="muted">La solución quedará visible para el cliente, que podrá revisarla.</p><form id="solve-form"><div class="field"><label for="solution">Qué se resolvió y cómo</label><textarea id="solution" name="message" required minlength="10" maxlength="20000"></textarea></div><p id="solve-error" class="inline-error" role="alert" hidden></p><button type="submit" class="button">Registrar solución</button></form></section>' : ''}</div><aside><section class="panel"><h2>Detalles</h2><dl class="meta-list"><div><dt>Estado</dt><dd>${esc(t.status_label)}</dd></div>${tierRow(t)}<div><dt>Solicitante</dt><dd>${esc(t.requesters.join(', '))}</dd></div><div><dt>Última actividad</dt><dd>${esc(date(t.updated_at))}</dd></div><div><dt>Tipo</dt><dd>${t.type === 1 ? 'Incidente' : 'Solicitud de servicio'}</dd></div></dl>${statusForm(t)}${p.delete ? '<div class="danger-zone"><button id="delete-ticket">Eliminar definitivamente</button></div>' : ''}</section>${sidePanels(t)}<section class="panel"><h2>Archivos adjuntos</h2>${t.attachments.length ? `<ul class="attachment-list">${t.attachments.map(a => `<li><a href="api?action=download&amp;id=${t.id}&amp;document=${a.id}" download>↓ ${esc(a.name)}</a></li>`).join('')}</ul>` : '<small>No hay archivos adjuntos.</small>'}</section></aside></div>`;
     document.getElementById('refresh-ticket').onclick = () => route();
     if (p.reply) document.getElementById('reply-form').onsubmit = event => { event.preventDefault(); const form = event.currentTarget; submit(form, async () => {
       const file = form.elements.file.files[0]; if (file && file.size > 10 * 1024 * 1024) throw new Error('El archivo debe pesar menos de 10 MB.');
@@ -594,7 +713,7 @@
       document.getElementById('cancel-delete').onclick = () => dialog.close();
       document.getElementById('confirm-delete').onclick = async event => {
         event.currentTarget.disabled = true;
-        try { await api('delete', {}, { id: t.id }); dialog.close(); state.flash = 'Solicitud enviada a la papelera. El historial se conserva en GLPI.'; window.location.hash = '#/tickets'; }
+        try { await api('delete', {}, { id: t.id }); dialog.close(); state.flash = 'Solicitud eliminada definitivamente.'; window.location.hash = '#/tickets'; }
         catch (error) { dialog.close(); notice(error.message, true); }
         finally { event.target.disabled = false; }
       };
@@ -607,18 +726,24 @@
       const publicRoute = window.location.hash.slice(2);
       // Solo se llega al login o al registro eligiendo uno de los dos cuadrados del inicio.
       const chosen = !!INTENTS[state.intent];
-      if (publicRoute === 'verificar') verify();
+      if (publicRoute === 'verificar' && state.mfa) verify();
       else if (chosen && publicRoute === 'registro') register();
       else if (chosen && publicRoute === 'ingresar') login();
       else { if (publicRoute) history.replaceState(null, '', window.location.pathname + window.location.search + '#/'); welcome(); }
       return;
     }
     const routeName = window.location.hash.slice(2) || (window.location.pathname.includes('crear-consulta') ? 'nueva' : window.location.pathname.includes('panel-atencion') ? 'tickets' : 'inicio');
-    document.querySelectorAll('[data-nav]').forEach(a => { const active = a.dataset.nav === (routeName.startsWith('ticket/') ? 'tickets' : routeName); a.classList.toggle('active', active); if (active) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
-    main.innerHTML = '<div class="loading" aria-live="polite">Cargando tu espacio…</div>';
+    const selectedIntent = /^nueva\/(servicio|problema)$/.exec(routeName);
+    if (selectedIntent && canCreate()) {
+      state.intent = selectedIntent[1];
+      try { sessionStorage.setItem('eticket-intent', state.intent); } catch (_) { /* Optional memory. */ }
+    }
+    document.querySelectorAll('[data-nav]').forEach(a => { const active = a.dataset.nav === (routeName.startsWith('ticket/') ? 'tickets' : selectedIntent ? 'nueva' : routeName); a.classList.toggle('active', active); if (active) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+    main.innerHTML = skeleton("Cargando la página");
     try {
-      if (routeName === 'nueva') await newTicket(generation);
+      if (routeName === 'nueva' || selectedIntent) await newTicket(generation);
       else if (routeName === 'administracion') await administration(generation);
+      else if (routeName === 'perfil') await myProfile(generation);
       else if (routeName === 'tickets') await tickets(generation);
       else if (/^ticket\/\d+$/.test(routeName)) await detail(Number(routeName.split('/')[1]), generation);
       else await dashboard(generation);
@@ -628,9 +753,17 @@
       document.getElementById('retry').onclick = () => route();
     }
   }
+  async function endSession(message) {
+    state.user = null; state.mfa = null; state.ticket = null; state.query = ''; state.status = ''; state.offset = 0; state.intent = '';
+    try { sessionStorage.removeItem('eticket-intent'); } catch (_) { /* Optional memory. */ }
+    history.replaceState(null, '', window.location.pathname + window.location.search + '#/');
+    route();
+    notice(message);
+    state.csrf = (await api('session')).csrf;
+  }
   document.getElementById('logout').onclick = async event => {
     event.currentTarget.disabled = true;
-    try { await api('logout', {}); state.user = null; state.ticket = null; state.services = null; state.query = ''; state.status = ''; state.offset = 0; state.intent = ''; try { sessionStorage.removeItem('eticket-intent'); } catch (_) { /* Optional memory. */ } const data = await api('session'); state.csrf = data.csrf; notice('Sesión cerrada.'); shell(); history.replaceState(null, '', window.location.pathname + window.location.search + '#/'); welcome(); }
+    try { await api('logout', {}); await endSession('Sesión cerrada.'); }
     catch (error) { notice(error.message, true); }
     finally { event.target.disabled = false; }
   };
@@ -638,5 +771,5 @@
   try { if (origin === 'A' || origin === 'B') sessionStorage.setItem('eticket-origin', origin); origin = sessionStorage.getItem('eticket-origin'); } catch (_) { /* Optional memory. */ }
   if (origin === 'A' || origin === 'B') { const link = document.getElementById('origin-link'); link.href = ((window.ETICKET_CONFIG || {}).glpiUrl || 'http://localhost:8081') + '/plugins/etickethub/front/return.php?origen=' + origin; link.hidden = false; }
   window.addEventListener('hashchange', () => { notice(state.flash); state.flash = ''; route(); document.getElementById('main').focus({ preventScroll: true }); window.scrollTo(0,0); });
-  api('session').then(data => { state.user = data.user; state.csrf = data.csrf; return route(); }).catch(error => { notice(error.message, true); main.innerHTML = '<section class="panel empty"><h1>Estamos preparando tu espacio</h1><p>La conexión con soporte no está disponible. Intenta recargar en unos momentos.</p><button id="reload" class="button">Recargar</button></section>'; document.getElementById('reload').onclick = () => window.location.reload(); });
+  api('session').then(data => { state.user = data.user; state.csrf = data.csrf; state.mfa = data.mfa; return route(); }).catch(error => { notice(error.message, true); main.innerHTML = '<section class="panel empty"><h1>Estamos preparando tu espacio</h1><p>La conexión con soporte no está disponible. Intenta recargar en unos momentos.</p><button id="reload" class="button">Recargar</button></section>'; document.getElementById('reload').onclick = () => window.location.reload(); });
 })();

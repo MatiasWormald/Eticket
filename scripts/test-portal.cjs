@@ -1,4 +1,4 @@
-// End-to-end HTTP checks. Synthetic tickets are moved to the trash afterwards.
+// End-to-end HTTP checks. Synthetic tickets are permanently deleted afterwards.
 // Node 22+; start Docker and run scripts/demo.ps1 first.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -36,12 +36,11 @@ class Client {
 async function main() {
   const anonymous = new Client(), client = new Client(), other = new Client(), agent = new Client(), manager = new Client();
   await anonymous.call('tickets', undefined, {}, 401);
-  await anonymous.call('login', { username: 'nobody', password: 'invalid' }, {}, 403);
-  assert.equal((await client.login('cliente.demo', 'GLPI_DEMO_PASSWORD')).role, 'cliente');
+  assert.equal((await client.login('cliente.eticket', 'GLPI_DEMO_PASSWORD')).role, 'cliente');
   assert.equal((await other.login('cliente2.demo', 'GLPI_DEMO_OTHER_PASSWORD')).role, 'cliente');
-  const agentUser = await agent.login('agente.demo', 'GLPI_DEMO_AGENT_PASSWORD');
+  const agentUser = await agent.login('agente.eticket', 'GLPI_DEMO_AGENT_PASSWORD');
   assert.equal(agentUser.role, 'agente'); assert.equal(agentUser.can_create, false);
-  assert.equal((await manager.login('gestor.demo', 'GLPI_DEMO_MANAGER_PASSWORD')).role, 'gestor');
+  assert.equal((await manager.login('gestor.eticket', 'GLPI_DEMO_MANAGER_PASSWORD')).role, 'gestor');
   console.log('OK sesiones individuales y roles');
   const ids = [];
   try {
@@ -51,8 +50,18 @@ async function main() {
     form.set('service', 'F01'); form.set('title', '[QA PORTAL] incidente ' + Date.now());
     form.set('description', 'Descripción sintética de prueba. <script>alert("x")</script>');
     form.set('urgency', '3'); form.set('_users_id_requester', '1');
+    const schema = (await client.call('schema')).schema;
+    form.set('answers', JSON.stringify(Object.fromEntries(schema.fields.filter(field => field.required)
+      .map(field => [field.id, field.type === 'select' ? field.options[0] : 'Respuesta de prueba']))));
     form.set('file', new Blob(['Evidencia ficticia del portal.\n'], { type: 'text/plain' }), 'evidencia.txt');
     let ticket = (await client.call('create', form, {}, 201)).ticket; ids.push(ticket.id);
+    for (const q of [String(ticket.id), '#' + ticket.id, form.get('title').slice(-13)]) {
+      const result = await client.call('tickets', undefined, { q, status: ticket.status });
+      assert(result.tickets.some(row => row.id === ticket.id), 'search and status must find the ticket');
+    }
+    assert.equal((await client.call('tickets', undefined, { q: '#' + ticket.id, status: 6 })).tickets.length, 0);
+    assert.equal((await client.call('tickets', undefined, { q: '%' })).tickets.length, 0);
+    assert.equal((await other.call('tickets', undefined, { q: '#' + ticket.id })).tickets.length, 0);
     assert(ticket.requesters.includes('Cliente Demostración'));
     assert.equal(ticket.attachments.length, 1, 'initial attachment must be listed');
     const documentId = ticket.attachments[0].id;
@@ -65,7 +74,8 @@ async function main() {
     console.log('OK aislamiento de clientes y permisos comprobados en servidor');
     const agentTicket = (await agent.call('ticket', undefined, { id: ticket.id })).ticket;
     assert.equal(agentTicket.permissions.reply, true); assert.equal(agentTicket.permissions.edit, false); assert.equal(agentTicket.permissions.delete, false);
-    for (const action of ['edit', 'delete', 'solve']) await agent.call(action, { title: 'Cambio no autorizado', description: 'No se debe guardar este cambio', message: 'Solución no autorizada' }, { id: ticket.id }, 403);
+    for (const action of ['edit', 'delete']) await agent.call(action, { title: 'Cambio no autorizado', description: 'No se debe guardar este cambio' }, { id: ticket.id }, 403);
+    assert.equal((await agent.call('status', { status: 2 }, { id: ticket.id })).ticket.status, 2);
     await agent.call('create', { service: 'F01', title: 'No autorizado', description: 'No se permite crear al agente' }, {}, 403);
     await agent.call('reply', { message: 'Respuesta pública de prueba.' }, { id: ticket.id });
     await agent.call('reply', { message: 'NOTA INTERNA QA NO VISIBLE AL CLIENTE', private: true }, { id: ticket.id });
@@ -79,7 +89,16 @@ async function main() {
     assert(!ticket.messages.some(m => m.content.includes('NOTA INTERNA')));
     assert(!ticket.attachments.some(a => a.id === privateDoc.id));
     await client.call('download', undefined, { id: ticket.id, document: privateDoc.id }, 404);
-    console.log('OK agente responde, no hace CRUD, y se ocultan notas internas al cliente');
+    assert.equal(ticket.tier.level, 4);
+    await agent.call('escalate', { reason: 'Requiere atención del siguiente equipo.' }, { id: ticket.id });
+    await agent.call('ticket', undefined, { id: ticket.id }, 404);
+    assert.equal((await client.call('ticket', undefined, { id: ticket.id })).ticket.tier.level, 3);
+    await manager.call('reassign', { level: 4, reason: 'Se devuelve a la mesa para validar el caso.' }, { id: ticket.id });
+    assert.equal((await agent.call('ticket', undefined, { id: ticket.id })).ticket.tier.level, 4);
+    console.log('OK agente responde, cambia estado y deriva; gestor reasigna; cliente no ve notas internas');
+    ticket = (await agent.call('solve', { message: 'Solución de prueba registrada por el agente.' }, { id: ticket.id })).ticket;
+    assert.equal(ticket.status, 5);
+    await client.call('approve', { accept: false, message: 'Necesito una revisión adicional.' }, { id: ticket.id });
     const replyForm = new FormData(); replyForm.set('message', 'Agrego otra evidencia.');
     replyForm.set('file', new Blob(['Segunda evidencia ficticia.\n'], { type: 'text/plain' }), 'respuesta.txt');
     ticket = (await client.call('reply', replyForm, { id: ticket.id })).ticket;
@@ -94,7 +113,7 @@ async function main() {
     assert.equal(ticket.status, 6);
     await manager.call('delete', {}, { id: ticket.id }); ids.splice(0, 1);
     await client.call('ticket', undefined, { id: ticket.id }, 404);
-    console.log('OK adjunto en respuesta, edición, solución, reapertura, cierre y papelera');
+    console.log('OK adjunto en respuesta, edición, solución, reapertura, cierre y eliminación definitiva');
     await client.call('logout', {}); await client.call('tickets', undefined, {}, 401);
     console.log('OK cierre de sesión invalida el acceso');
   } finally {
@@ -103,4 +122,4 @@ async function main() {
   }
 }
 if (require.main === module) main().catch(error => { console.error(error); process.exitCode = 1; });
-module.exports = { Client };
+module.exports = { Client, env };

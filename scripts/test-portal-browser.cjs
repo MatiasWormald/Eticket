@@ -13,7 +13,8 @@ async function main() {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } }); contexts.push(context);
     const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
     await page.goto('http://localhost:8080/');
-    await page.getByLabel('Usuario', { exact: true }).fill(username);
+    await page.getByRole('link', { name: /Tengo un problema/ }).click();
+    await page.getByLabel('Usuario o correo', { exact: true }).fill(username);
     await page.getByLabel('Contraseña', { exact: true }).fill(env[key]);
     await page.getByRole('button', { name: 'Ingresar a mi espacio' }).click();
     await page.getByRole('heading', { name: /^Hola,/ }).waitFor();
@@ -21,18 +22,35 @@ async function main() {
   }
   try {
     const anonymous = await browser.newContext({ viewport: { width: 1440, height: 1000 } }); contexts.push(anonymous);
-    const landing = await anonymous.newPage(); await landing.goto('http://localhost:8080/');
-    await landing.getByRole('heading', { name: 'Te damos la bienvenida' }).waitFor();
+    const landing = await anonymous.newPage();
+    await landing.route('**/api?action=session', async route => {
+      await landing.locator('.skeleton-page').waitFor();
+      await route.continue();
+    });
+    await landing.goto('http://localhost:8080/');
+    await landing.getByRole('link', { name: /Tengo un problema/ }).waitFor();
     await landing.screenshot({ path: path.join(root, 'artifacts/portal-qa/login-desktop.png'), fullPage: true });
-    const client = await account('cliente.demo', 'GLPI_DEMO_PASSWORD');
+    const client = await account('cliente.eticket', 'GLPI_DEMO_PASSWORD');
+    await client.getByRole('link', { name: 'Mi perfil' }).click();
+    await client.getByRole('heading', { name: 'Mi perfil', exact: true }).waitFor();
+    assert.match(await client.getByLabel('Nombre completo').inputValue(), /Cliente/);
+    await client.getByRole('button', { name: 'Eliminar mi cuenta', exact: true }).waitFor();
     await client.screenshot({ path: path.join(root, 'artifacts/portal-qa/client-desktop.png'), fullPage: true });
     await client.setViewportSize({ width: 390, height: 844 });
     await client.screenshot({ path: path.join(root, 'artifacts/portal-qa/client-mobile.png'), fullPage: true });
     assert(await client.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'mobile must not overflow');
     await client.getByRole('link', { name: 'Crear solicitud', exact: false }).first().click();
-    await client.getByLabel('¿En qué necesitas ayuda?').selectOption('F01');
-    await client.getByLabel('Asunto', { exact: true }).fill('[QA UI] prueba del portal');
-    await client.getByLabel('¿Qué ocurre o qué necesitas?').fill('Prueba ficticia desde navegador. Necesito ayuda con el acceso al proyecto de prueba.');
+    await client.getByRole('link', { name: 'Pedir un servicio', exact: true }).click();
+    await client.getByRole('heading', { name: 'Pide un servicio', exact: true }).waitFor();
+    await client.getByRole('link', { name: 'Reportar un problema', exact: true }).click();
+    await client.locator('select[name="service"]').selectOption('F01');
+    await client.locator('#extra-choice').selectOption({ index: 1 });
+    for (const field of await client.locator('#additional-fields [required]').all()) {
+      if (await field.evaluate(el => el.tagName === 'SELECT')) await field.selectOption({ index: 1 });
+      else await field.fill('Respuesta de prueba');
+    }
+    await client.locator('#title').fill('[QA UI] prueba del portal');
+    await client.locator('textarea[name="description"]').fill('Prueba ficticia desde navegador. Necesito ayuda con el acceso al proyecto de prueba.');
     await client.getByRole('button', { name: 'Enviar solicitud' }).click();
     await client.waitForURL(/#\/ticket\/\d+$/);
     ticketId = Number(client.url().split('/').at(-1));
@@ -40,19 +58,42 @@ async function main() {
     await client.getByLabel('Agregar una respuesta').fill('Respuesta sintética enviada desde el navegador.');
     await client.getByRole('button', { name: 'Enviar respuesta' }).click();
     await client.getByText('Respuesta sintética enviada desde el navegador.', { exact: true }).waitFor();
+    await client.locator('[data-nav="tickets"]').click();
+    await client.getByLabel('Buscar por asunto o número').fill('#' + ticketId);
+    await client.getByRole('button', { name: 'Buscar', exact: true }).click();
+    await client.getByRole('link', { name: /prueba del portal/ }).waitFor();
+    await client.getByLabel('Filtrar por estado').selectOption('6');
+    await client.getByRole('heading', { name: 'No hay coincidencias' }).waitFor();
+    await client.getByRole('button', { name: 'Limpiar filtros' }).click();
+    await client.getByRole('link', { name: /prueba del portal/ }).click();
     await client.screenshot({ path: path.join(root, 'artifacts/portal-qa/ticket-mobile.png'), fullPage: true });
-    const agent = await account('agente.demo','GLPI_DEMO_AGENT_PASSWORD');
+    const agent = await account('agente.eticket','GLPI_DEMO_AGENT_PASSWORD');
+    await agent.getByRole('link', { name: 'Mi perfil' }).click();
+    await agent.getByRole('heading', { name: 'Mi perfil', exact: true }).waitFor();
+    assert.equal(await agent.getByRole('button', { name: 'Eliminar mi cuenta', exact: true }).count(), 0);
     await agent.goto('http://localhost:8080/#/ticket/' + ticketId);
     await agent.getByLabel('Agregar una respuesta').waitFor();
     assert.equal(await agent.getByRole('button', { name: 'Editar', exact: true }).count(), 0);
-    assert.equal(await agent.getByRole('button', { name: 'Enviar a la papelera', exact: true }).count(), 0);
+    assert.equal(await agent.getByRole('button', { name: 'Eliminar definitivamente', exact: true }).count(), 0);
     await agent.getByLabel('Agregar una respuesta').fill('El agente recibió la solicitud y está revisando el caso.');
     await agent.getByRole('button', { name: 'Enviar respuesta' }).click();
     await agent.getByText('El agente recibió la solicitud y está revisando el caso.', { exact: true }).waitFor();
-    manager = await account('gestor.demo','GLPI_DEMO_MANAGER_PASSWORD');
+    manager = await account('gestor.eticket','GLPI_DEMO_MANAGER_PASSWORD');
     await manager.goto('http://localhost:8080/#/administracion');
-    await manager.getByRole('heading', { name: 'Administración de eTicket', exact: true }).waitFor();
+    await manager.getByRole('heading', { name: 'Administración de Eticket', exact: true }).waitFor();
+    await manager.getByLabel('Tu contraseña de gestor').fill(env.GLPI_DEMO_MANAGER_PASSWORD);
+    await manager.getByRole('button', { name: 'Confirmar', exact: true }).click();
+    await manager.getByRole('button', { name: /Crear cuenta/ }).waitFor();
+    await manager.getByLabel('Filtrar agentes por tier').selectOption('4');
+    assert.equal(await manager.locator('.user-role-cliente').count(), 0);
+    assert(await manager.locator('.user-role-agente').count() > 0);
+    await manager.getByRole('tab', { name: 'Formulario de solicitudes' }).click();
     originalSchema = await manager.evaluate(async () => (await (await fetch('/api?action=schema')).json()).schema);
+    await manager.locator('[data-base="service"] summary').click();
+    await manager.getByRole('button', { name: /Agregar servicio/ }).click();
+    assert(await manager.getByRole('button', { name: /Agregar servicio/ }).isDisabled());
+    await manager.locator('.custom-service').last().getByRole('button', { name: 'Eliminar servicio' }).click();
+    assert(await manager.getByRole('button', { name: /Agregar servicio/ }).isEnabled());
     await manager.getByRole('button', { name: 'Añadir campo', exact: false }).click();
     const customField = manager.locator('.schema-field').last();
     await customField.getByLabel('Nombre del campo', { exact: true }).fill('Proyecto adicional QA navegador');
@@ -67,12 +108,13 @@ async function main() {
     await manager.getByRole('button', { name: 'Guardar estructura', exact: true }).click();
     await manager.getByRole('status').filter({ hasText: 'Estructura guardada' }).waitFor(); schemaChanged = false;
     const popup = manager.waitForEvent('popup');
-    await manager.getByRole('link', { name: 'Crear y administrar perfiles', exact: false }).click();
+    await manager.getByRole('tab', { name: 'Accesos a GLPI' }).click();
+    await manager.getByRole('link', { name: /Perfiles de GLPI/ }).click();
     nativePage = await popup;
     await nativePage.waitForURL(url => url.origin === 'http://localhost:8081');
     await nativePage.waitForLoadState();
     if (await nativePage.locator('#login_name').isVisible()) {
-      await nativePage.locator('#login_name').fill('gestor.demo');
+      await nativePage.locator('#login_name').fill('gestor.eticket');
       await nativePage.locator('#login_password').fill(env.GLPI_DEMO_MANAGER_PASSWORD);
       await nativePage.locator('button[type="submit"][name="submit"]').click();
       await nativePage.waitForURL(/front\/profile.php|ReAuth\/Prompt/);
@@ -109,15 +151,15 @@ async function main() {
     await client.getByRole('button', { name: 'Sí, está resuelto', exact: true }).click();
     await client.getByText('Cerrada', { exact: true }).first().waitFor();
     await manager.getByRole('button', { name: 'Actualizar', exact: true }).click();
-    await manager.getByRole('button', { name: 'Enviar a la papelera', exact: true }).first().click();
-    await manager.getByRole('dialog').getByRole('button', { name: 'Enviar a la papelera', exact: true }).click();
+    await manager.getByRole('button', { name: 'Eliminar definitivamente', exact: true }).first().click();
+    await manager.getByRole('dialog').getByRole('button', { name: 'Eliminar definitivamente', exact: true }).click();
     await manager.waitForURL(/#\/tickets$/); ticketId = null;
     assert.deepEqual(errors, []);
     console.log('OK Chrome: roles, móvil, estructura editable, campos visibles al cliente, acceso GLPI, creación de perfiles, tickets y papelera. Sin errores JavaScript.');
   } finally {
     if (manager && schemaChanged && originalSchema) await manager.evaluate(async original => {
       const s = await (await fetch('/api?action=session')).json(); const current = (await (await fetch('/api?action=schema')).json()).schema;
-      await fetch('/api?action=save_schema', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Eticket-CSRF': s.csrf }, body: JSON.stringify({ revision: current.revision, fields: original.fields }) });
+      await fetch('/api?action=save_schema', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Eticket-CSRF': s.csrf }, body: JSON.stringify({ revision: current.revision, fields: original.fields, base: original.base }) });
     }, originalSchema).catch(() => {});
     if (nativePage && nativeProfileId) await nativePage.request.post('http://localhost:8081/front/profile.form.php', { form: { purge: '1', id: nativeProfileId } }).catch(() => {});
     if (manager && ticketId) {

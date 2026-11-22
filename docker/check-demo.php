@@ -5,7 +5,7 @@ require '/var/www/html/vendor/autoload.php';
 $kernel = new Glpi\Kernel\Kernel(); $kernel->boot();
 global $CFG_GLPI;
 if ($CFG_GLPI['language'] !== 'es_MX') { throw new RuntimeException('Idioma global incorrecto'); }
-$rows = (new User())->find(['name' => 'cliente.demo', 'is_active' => 1]);
+$rows = (new User())->find(['name' => 'cliente.eticket', 'is_active' => 1]);
 if (count($rows) !== 1) { throw new RuntimeException('Cliente de demostración no disponible'); }
 $user = reset($rows); $uid = (int) $user['id'];
 if (($user['language'] ?: $CFG_GLPI['language']) !== 'es_MX') { throw new RuntimeException('Idioma del cliente incorrecto'); }

@@ -6,17 +6,16 @@
   <meta name="theme-color" content="#c8102e">
   <title>Eticket · Centro de ayuda Tech Hub</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/portal.css?v=20261115b">
-  <script src="config.js?v=20261115b" defer></script>
-  <script src="assets/layout.js?v=20261115b" defer></script>
-  <script src="assets/demo.js?v=20261115b" defer></script>
-  <script src="assets/portal.js?v=20261115b" defer></script>
+  <link rel="stylesheet" href="assets/portal.css?v=20261122d">
+  <script src="config.js?v=20261122d" defer></script>
+  <script src="assets/layout.js?v=20261122d" defer></script>
+  <script src="assets/portal.js?v=20261122h" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Saltar al contenido</a>
   <header class="topbar">
     <a class="brand" href="#/inicio" aria-label="Eticket, inicio"><img src="assets/logo-techhub-uls.png" alt="Tech Hub ULS" width="216" height="48"><span class="brand-name">Eticket<svg class="brand-ticket" viewBox="0 0 28 20" aria-hidden="true" focusable="false"><path d="M3 2h22a1 1 0 0 1 1 1v4a3 3 0 0 0 0 6v4a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-4a3 3 0 0 0 0-6V3a1 1 0 0 1 1-1z"/><path class="brand-ticket-cut" d="M18 4.5v11"/><path class="brand-ticket-check" d="M7.5 10.2l2.4 2.4 4.4-4.8"/></svg></span></a>
-    <div class="top-actions"><a id="origin-link" class="back-link" hidden>← Volver al sitio de origen</a><span class="service-label"><span></span> Centro de ayuda</span><button id="logout" class="button subtle small" hidden>Cerrar sesión</button></div>
+    <div class="top-actions"><a id="origin-link" class="back-link" hidden>← Volver al sitio de origen</a><span class="service-label"><span></span> Centro de ayuda</span><a id="profile-link" href="#/perfil" data-nav="perfil" class="button subtle small" hidden>Mi perfil</a><button id="logout" class="button danger small" hidden>Cerrar sesión</button></div>
   </header>
   <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
   <div class="workspace" id="workspace">
@@ -31,10 +30,10 @@
       <div class="sidebar-help"><span class="help-mark">?</span><strong>Estamos para ayudarte</strong><p>Describe lo que ocurre y sigue la conversación desde aquí.</p><a href="guia.html">Guía de ayuda ↗</a></div>
       <div class="account"><span class="avatar" id="account-avatar"></span><div><strong id="account-name"></strong><small id="account-role"></small></div></div>
     </aside>
-    <main id="main" tabindex="-1"><div class="loading">Preparando tu espacio de ayuda…</div></main>
+    <main id="main" tabindex="-1"><div class="skeleton skeleton-page" role="status"><span class="visually-hidden">Preparando tu espacio de ayuda</span><div aria-hidden="true"><div class="skeleton-heading"><span></span><span></span></div><div class="skeleton-block"><span></span><span></span><span></span></div><div class="skeleton-block"><span></span><span></span><span></span></div></div></div></main>
   </div>
   <footer class="site-footer" id="site-footer"></footer>
-  <dialog id="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">Enviar a la papelera</h2><p>La solicitud dejará de aparecer en el portal. Su historial se conserva en GLPI y la administración puede recuperarla.</p><div class="actions"><button class="button subtle" id="cancel-delete">Cancelar</button><button class="button danger" id="confirm-delete">Enviar a la papelera</button></div></dialog>
+  <dialog id="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">Eliminar definitivamente</h2><p>Esta solicitud se eliminará de GLPI de forma permanente.</p><div class="actions"><button class="button subtle" id="cancel-delete">Cancelar</button><button class="button danger" id="confirm-delete">Eliminar definitivamente</button></div></dialog>
   <noscript>Activa JavaScript para utilizar el portal de solicitudes.</noscript>
 </body>
 </html>

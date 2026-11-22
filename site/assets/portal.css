@@ -2117,6 +2117,17 @@ dialog.privacy-dialog[open] { display: flex; }
 .user-row .profile-tier { flex-wrap: wrap; }
 .user-row.inactive { background: var(--soft); }
 .user-row.inactive .profile-main strong { color: var(--muted); }
+.user-row.user-role-cliente { border-left: 4px solid #c8102e; }
+.user-row.user-role-gestor { border-left: 4px solid #45b8e8; }
+.button.edit-action { background: #155981; color: #fff; }
+.button.edit-action:hover { background: #10486a; }
+.button.restore-action { background: #f5d780; color: #352600; }
+.button.restore-action:hover { background: #ebc65d; }
+.base-field summary { background: #272d35; color: #fff; border-radius: 10px; }
+.base-field[open] summary { border-radius: 10px 10px 0 0; }
+.base-field summary:hover { background: #363e49; }
+.base-field-name, .base-field-edit { color: #fff; }
+.base-field-body select { background-color: #272d35; color: #fff; color-scheme: dark; }
 .state-off { color: #8a1c2c; font-weight: 600; }
 .profile-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
 .profile-form input[readonly] { background: var(--soft); color: var(--muted); }
@@ -2140,4 +2151,22 @@ dialog.privacy-dialog[open] { display: flex; }
   .footer-inner > .footer-col:nth-child(2) {
     text-align: left;
   }
+}
+.skeleton-heading, .skeleton-block { display: grid; gap: .75rem; }
+.skeleton-heading { margin-bottom: 1.5rem; }
+.skeleton-block { padding: 1.25rem; margin-bottom: .75rem; border: 1px solid #dce4ee; border-radius: 1rem; }
+.skeleton [aria-hidden] span {
+  display: block;
+  height: .85rem;
+  border-radius: .4rem;
+  background: #e4ebf3;
+  animation: skeleton-pulse 1.4s ease-in-out infinite alternate;
+}
+.skeleton-heading span:first-child { height: 2.25rem; width: min(70%, 27rem); }
+.skeleton-heading span:last-child { width: min(90%, 35rem); }
+.skeleton-block span:first-child { height: 1.15rem; width: 48%; }
+.skeleton-block span:last-child { width: 68%; }
+@keyframes skeleton-pulse { to { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton [aria-hidden] span { animation: none; }
 }

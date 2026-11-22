@@ -1,14 +1,35 @@
 // Local development only: temporarily changes the portal schema, then restores it.
 const assert = require('node:assert/strict');
-const { Client } = require('./test-portal.cjs');
+const { Client, env } = require('./test-portal.cjs');
 async function main() {
   const manager = new Client(), agent = new Client(), client = new Client(), retired = new Client();
-  assert.equal((await manager.login('gestor.demo', 'GLPI_DEMO_MANAGER_PASSWORD')).can_admin, true);
-  assert.equal((await agent.login('agente.demo', 'GLPI_DEMO_AGENT_PASSWORD')).can_admin, false);
-  assert.equal((await client.login('cliente.demo', 'GLPI_DEMO_PASSWORD')).can_admin, false);
+  assert.equal((await manager.login('gestor.eticket', 'GLPI_DEMO_MANAGER_PASSWORD')).can_admin, true);
+  assert.equal((await agent.login('agente.eticket', 'GLPI_DEMO_AGENT_PASSWORD')).can_admin, false);
+  assert.equal((await client.login('cliente.eticket', 'GLPI_DEMO_PASSWORD')).can_admin, false);
+  await manager.call('users', undefined, {}, 428);
+  await manager.call('reauth_users', { password: env.GLPI_DEMO_MANAGER_PASSWORD });
+  const accounts = (await manager.call('users')).users;
+  assert.deepEqual(accounts.filter(user => ['cliente.eticket', 'agente.eticket', 'gestor.eticket'].includes(user.login)).map(user => user.role).sort(), ['agente', 'cliente', 'gestor']);
+  assert.equal(accounts.find(user => user.login === 'agente.eticket').tier, 4);
+  assert(!accounts.some(user => ['cliente.demo', 'agente.demo', 'gestor.demo', 'tecnico.demo'].includes(user.login)));
+  for (const actor of [agent, client]) await actor.call('users', undefined, {}, 403);
+  for (const actor of [agent, manager]) {
+    assert.equal((await actor.call('profile')).profile.can_delete, false);
+    await actor.call('delete_profile', { confirm: true }, {}, 403);
+  }
+  await manager.call('delete_user', { id: accounts.find(user => user.login === 'gestor.eticket').id }, {}, 403);
   await retired.call('session');
-  await retired.call('login', { username: 'tecnico.demo', password: '123' }, {}, 401);
+  await retired.call('login', { username: 'gestor.demo', password: '123' }, {}, 401);
   const original = (await manager.call('schema')).schema;
+  await manager.call('save_schema', {
+    ...original, base: { ...original.base, title: { label: 'a'.repeat(121) } },
+  }, {}, 400);
+  await manager.call('save_schema', {
+    ...original, base: { ...original.base, service: { custom: [
+      { id: 'custom_063bb73aef00', name: 'Servicio QA uno', type: 2 },
+      { id: 'custom_063bb73aef01', name: 'Servicio QA dos', type: 2 },
+    ] } },
+  }, {}, 400);
   let changed = false, id;
   try {
     const field = { id: 'field_qatest1234', label: 'Proyecto de prueba QA', type: 'select', required: true, options: ['Proyecto A', 'Proyecto B'] };

@@ -8,9 +8,9 @@ require '/var/www/html/vendor/autoload.php';
 $kernel = new Glpi\Kernel\Kernel();
 $kernel->boot();
 global $DB, $CFG_GLPI;
-$name = getenv('GLPI_DEMO_USER') ?: 'cliente.demo';
+$name = getenv('GLPI_DEMO_USER') ?: 'cliente.eticket';
 $password = getenv('GLPI_DEMO_PASSWORD') ?: '';
-if (($password !== '123' && strlen($password) < 20) || $name !== 'cliente.demo') {
+if (($password !== '123' && strlen($password) < 20) || $name !== 'cliente.eticket') {
     throw new RuntimeException('Ejecuta scripts/demo.ps1 para preparar las credenciales de demostración.');
 }
 $adminRows = (new User())->find(['name' => getenv('GLPI_ADMIN_USER') ?: 'admin', 'is_active' => 1]);
@@ -82,7 +82,7 @@ try {
     } else {
         $uid = (int) array_key_first($users);
         if (reset($users)['comment'] !== 'Cuenta ficticia para presentar eTicket. Sin datos ni correo reales.') {
-            throw new RuntimeException('Ya existe cliente.demo y no pertenece a esta demostración. No se modifica.');
+            throw new RuntimeException('Ya existe cliente.eticket y no pertenece a esta demostración. No se modifica.');
         }
         // No restablecer contraseña ni cambios hechos durante una presentación.
     }
@@ -114,6 +114,13 @@ try {
         }
         echo "Creado #$id: " . $example['name'] . PHP_EOL;
     }
+    Session::callAsSystem(function (): void {
+        foreach ((new User())->find(['name' => 'cliente.demo', 'comment' => 'Cuenta ficticia para presentar eTicket. Sin datos ni correo reales.', 'is_deleted' => 0]) as $old) {
+            if (!(new User())->update(['id' => $old['id'], 'is_active' => 0]) || !(new User())->delete(['id' => $old['id']], false)) {
+                throw new RuntimeException('No se pudo retirar cliente.demo.');
+            }
+        }
+    });
     $DB->commit();
 } catch (Throwable $error) { $DB->rollBack(); throw $error; }
-echo "Demostración preparada. Usuario: cliente.demo. Contraseña local en .env.demo.\n";
+echo "Demostración preparada. Usuario: cliente.eticket. Contraseña local en .env.demo.\n";

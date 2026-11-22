@@ -14,10 +14,5 @@ window.ETICKET_CONFIG = {
     { name: "Nombre Apellido", url: "" },
     { name: "Nombre Apellido", url: "" },
     { name: "Nombre Apellido", url: "" },
-  ],
-
-  /* Modo demostración: simula en este navegador los tiers, las cuentas y la
-     verificación en dos pasos mientras el backend no los tenga.
-   false cuando el backend esté listo. */
-  demoMode: true
+  ]
 };

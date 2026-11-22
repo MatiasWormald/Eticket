@@ -8,7 +8,7 @@ if (!(Test-Path -LiteralPath '.env.demo')) {
     try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
     $secret = [Convert]::ToBase64String($bytes)
     $utf8 = New-Object System.Text.UTF8Encoding($false)
-    [IO.File]::WriteAllText((Join-Path (Get-Location) '.env.demo'), "GLPI_DEMO_USER=cliente.demo`nGLPI_DEMO_PASSWORD=$secret`n", $utf8)
+    [IO.File]::WriteAllText((Join-Path (Get-Location) '.env.demo'), "GLPI_DEMO_USER=cliente.eticket`nGLPI_DEMO_PASSWORD=$secret`n", $utf8)
 }
 $values = @{}
 foreach ($line in Get-Content -LiteralPath '.env.demo') {

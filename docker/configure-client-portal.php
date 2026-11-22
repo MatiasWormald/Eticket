@@ -8,6 +8,7 @@ if (PHP_SAPI !== 'cli') { exit(1); }
 chdir('/var/www/html');
 require 'vendor/autoload.php';
 $kernel = new Glpi\Kernel\Kernel(); $kernel->boot();
+require_once '/var/www/html/plugins/etickethub/inc/Portal.php';
 global $DB;
 $_SESSION['glpi_currenttime'] = date('Y-m-d H:i:s');
 $_SESSION['glpiactive_entity'] = 0;
@@ -19,8 +20,9 @@ $_SESSION['glpicronuserrunning'] = 'eticket-client-portal';
 $DB->beginTransaction();
 try {
     Session::callAsSystem(function (): void {
+        EticketPortal::configureRegisteredMfa();
         foreach ([
-            'ETICKET Portal Agente' => Ticket::READALL,
+            'ETICKET Portal Agente' => Ticket::READASSIGN | UPDATE,
             'ETICKET Portal Gestor' => Ticket::READALL | CREATE | UPDATE | DELETE | Ticket::ASSIGN,
         ] as $name => $ticketRights) {
             $profile = new Profile();

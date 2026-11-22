@@ -22,22 +22,26 @@ powershell -ExecutionPolicy Bypass -File scripts/demo.ps1
 
 | Usuario | Perfil | Contraseña en `.env.demo` |
 |---|---|---|
-| cliente.demo | Crear y responder sus propias solicitudes | GLPI_DEMO_PASSWORD |
-| agente.demo | Leer y responder tickets de sus entidades autorizadas, incluyendo notas internas | GLPI_DEMO_AGENT_PASSWORD |
-| gestor.demo | Administrador general: tickets, campos, formularios, usuarios y perfiles | GLPI_DEMO_MANAGER_PASSWORD |
+| cliente.eticket | Crear y responder sus propias solicitudes | GLPI_DEMO_PASSWORD |
+| agente.eticket | Atender tickets asignados a su usuario o equipo, cambiar estados y derivar | GLPI_DEMO_AGENT_PASSWORD |
+| gestor.eticket | Administrar tickets, campos, formularios, usuarios y perfiles | GLPI_DEMO_MANAGER_PASSWORD |
 | cliente2.demo | Segundo cliente para comprobar aislamiento | GLPI_DEMO_OTHER_PASSWORD |
 
-Las claves se generan localmente; `.env.demo` está excluido de Git. El script conserva cuentas y claves existentes, y rechaza cuentas homónimas ajenas a la demostración. Si se cambió una contraseña desde GLPI, el archivo puede dejar de coincidir. No compartir cuentas de prueba en un entorno real.
+Las claves se guardan en `.env.demo`, que está excluido de Git. En un entorno nuevo el script genera claves locales. Conserva las cuentas nuevas que ya existan y retira las cuentas anteriores marcadas como demostración. Si se cambió una contraseña desde GLPI, el archivo puede dejar de coincidir.
 
 Administrador: `GLPI_ADMIN_USER` y `GLPI_ADMIN_PASSWORD` de `.env`. Cambiar ese archivo no modifica contraseñas de una base instalada.
 
-Hay tres roles de uso: cliente, agente de atención y gestor administrador. El agente consulta y responde; el gestor tiene los derechos del Super-Admin de GLPI, incluida la creación de perfiles y usuarios. El gestor puede editar la estructura del formulario desde **Administración**, y abrir GLPI para la configuración completa. `tecnico.demo` está retirado, desactivado y en papelera; no se vuelve a crear. Los derechos se comprueban en el servidor.
+Hay tres roles de uso: cliente, agente de atención y gestor administrador. El agente atiende los tickets asignados a su usuario o equipo. El gestor tiene los derechos del Super-Admin de GLPI y puede administrar cuentas, tiers y formularios desde **Administración**. La gestión de cuentas exige la reautenticación de GLPI.
+
+El enlace **Crea una cuenta** solo registra clientes en GLPI. El gestor crea las cuentas de agente y gestor desde Administración. Al registrarse o iniciar sesión en Eticket, las cuentas con correo reciben un código de seis dígitos que vence en cinco minutos. Tras verificar el código, Eticket recuerda el navegador durante 24 horas y pide la contraseña en cada ingreso. Las políticas nativas de autenticación de GLPI se aplican al entrar directamente a GLPI.
+
+Para entregar los códigos a buzones reales, configura el remitente y el transporte SMTP saliente en GLPI y comprueba el envío con su opción de correo de prueba. Si falla el envío durante el registro, se revierte la creación de la cuenta.
 
 ## Qué funciona en el portal
 
-Inicio de sesión individual, ocho tipos de servicio, creación, búsqueda y paginación de solicitudes, estados en español, conversación pública y notas internas, adjuntos y descargas autorizadas, edición según permisos, propuesta de solución, aceptación o rechazo por el cliente y papelera para el gestor.
+Inicio de sesión individual, ocho tipos de servicio, creación, búsqueda y paginación de solicitudes, estados en español, conversación pública y notas internas, adjuntos y descargas autorizadas, edición según permisos, propuesta de solución y aceptación o rechazo por el cliente. El portal solicita confirmación antes de eliminar definitivamente una cuenta o solicitud. Las cuentas archivadas con versiones anteriores dejan libre el correo para un nuevo registro.
 
-Se permiten adjuntos PDF, PNG, JPG y TXT de hasta 10 MB. No hay actualización en tiempo real: el botón **Actualizar** consulta los últimos avances. El correo saliente no está configurado.
+Se permiten adjuntos PDF, PNG, JPG y TXT de hasta 10 MB. No hay actualización en tiempo real: el botón **Actualizar** consulta los últimos avances.
 
 La autenticación usa las cuentas y sesiones nativas de GLPI. Para cuentas con MFA, utilizar primero el acceso institucional de GLPI desde la pantalla de ingreso y volver al portal. La experiencia de doble factor dentro de la interfaz propia queda pendiente de implementación y validación.
 
