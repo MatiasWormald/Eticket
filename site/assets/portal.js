@@ -45,7 +45,7 @@ async function route() {
     else await dashboard(generation);
   } catch (error) {
     if (generation !== state.generation || !state.user) return;
-    main.innerHTML = `<section class="panel empty"><h1>No pudimos abrir esta página</h1><p>${esc(error.message)}</p><div class="actions" style="justify-content:center"><button id="retry" class="button">Intentar nuevamente</button><a class="button subtle" href="#/inicio">Volver al inicio</a></div></section>`;
+    main.innerHTML = `<section class="panel empty"><h1>No pudimos abrir esta página</h1><p>${esc(error.message)}</p><div class="actions actions-center"><button id="retry" class="button">Intentar nuevamente</button><a class="button subtle" href="#/inicio">Volver al inicio</a></div></section>`;
     document.getElementById('retry').onclick = () => route();
   }
 }
@@ -84,6 +84,12 @@ async function start() {
   try {
     const { user, csrf, mfa } = await api('session');
     Object.assign(state, { user, csrf, mfa });
+    if (user) document.documentElement.dataset.eticketSession = 'known';
+    else document.documentElement.removeAttribute('data-eticket-session');
+    try {
+      if (user) sessionStorage.setItem('eticket-known-session', '1');
+      else sessionStorage.removeItem('eticket-known-session');
+    } catch (_) {}
     await route();
   } catch (error) {
     notice(error.message, true);

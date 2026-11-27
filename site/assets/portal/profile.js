@@ -1,4 +1,4 @@
-import { api, endSession, esc, main, notice, shell, state, submit } from './core.js';
+import { api, confirmAction, endSession, esc, main, notice, shell, state, submit } from './core.js';
 import { chip } from './tiers.js';
 
 const USER_ROLES = { cliente: 'Cliente', agente: 'Agente', gestor: 'Gestor' };
@@ -26,7 +26,7 @@ async function myProfile(generation) {
   if (remove) remove.onclick = async () => {
     const password = form.elements.password.value;
     if (!password) { form.elements.password.reportValidity(); return; }
-    if (!window.confirm('¿Eliminar tu cuenta de Eticket? Se cerrará tu sesión.')) return;
+    if (!await confirmAction({ title: 'Eliminar mi cuenta', message: '¿Eliminar tu cuenta de Eticket? Se cerrará tu sesión.', confirmLabel: 'Eliminar mi cuenta' })) return;
     form.elements.password.value = '';
     remove.disabled = true;
     try { await api('delete_profile', { password, confirm: true }); await endSession('Cuenta eliminada.'); }

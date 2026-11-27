@@ -1,6 +1,7 @@
 import { main, state, INTENTS, esc, notice, api, shell, submit, requestRoute } from './core.js';
 
-const storyHtml = (title, text) => `<div class="login-story"><p class="eyebrow">TECH HUB ULS / CENTRO DE AYUDA</p><h1>${title}<span style="color:#f37188">.</span></h1><p>${text}</p><ul><li>Envía tu solicitud en pocos pasos</li><li>Conversa directamente con el equipo</li><li>Consulta el estado cuando lo necesites</li></ul><small>Eticket · Conectamos preguntas con soluciones.</small></div>`;
+const storyHtml = (title, text) => `<div class="login-story"><p class="eyebrow">TECH HUB ULS / CENTRO DE AYUDA</p><h1>${title}<span class="brand-dot">.</span></h1><p>${text}</p><ul><li>Envía tu solicitud en pocos pasos</li><li>Conversa directamente con el equipo</li><li>Consulta el estado cuando lo necesites</li></ul><small>Eticket · Conectamos preguntas con soluciones.</small></div>`;
+const rememberSession = () => { try { sessionStorage.setItem('eticket-known-session', '1'); } catch (_) {} };
 function bindPasswordToggle(buttonId, inputIds) {
   document.getElementById(buttonId).onclick = event => {
     const inputs = inputIds.map(id => document.getElementById(id)); const show = inputs[0].type === 'password';
@@ -8,14 +9,19 @@ function bindPasswordToggle(buttonId, inputIds) {
     event.currentTarget.textContent = show ? 'Ocultar' : 'Mostrar'; event.currentTarget.setAttribute('aria-pressed', String(show));
   };
 }
+document.addEventListener('click', event => {
+  const card = event.target.closest('[data-intent]');
+  if (!card) return;
+  state.intent = card.dataset.intent;
+  try { sessionStorage.setItem('eticket-intent', state.intent); } catch (_) { /* Optional memory. */ }
+});
 function welcome() {
+  if (main.dataset.staticWelcome === 'true' && main.querySelector('.static-welcome')) {
+    main.removeAttribute('data-static-welcome');
+    return;
+  }
+  main.removeAttribute('data-static-welcome');
   main.innerHTML = `<section class="start"><p class="eyebrow">TECH HUB ULS / CENTRO DE AYUDA</p><h1>¿Cómo podemos ayudarte?</h1><p class="lead">Elige la opción que mejor describe lo que necesitas. Después ingresarás con tu cuenta para continuar.</p><div class="choice-grid start-grid"><a class="choice" href="#/ingresar" data-intent="servicio"><span class="choice-icon" aria-hidden="true">＋</span><h2>Quiero un servicio</h2><p>Pide un acceso, apoyo técnico, datos o un nuevo proyecto a alguna de nuestras unidades.</p><span>Continuar →</span></a><a class="choice" href="#/ingresar" data-intent="problema"><span class="choice-icon" aria-hidden="true">!</span><h2>Tengo un problema</h2><p>Algo dejó de funcionar o no funciona como esperabas: un sistema, un acceso o un equipo.</p><span>Continuar →</span></a></div><p class="start-login">Para entrar, elige una de las dos opciones. Si ya tienes solicitudes, las verás al iniciar sesión.</p></section>`;
-  main.querySelectorAll('[data-intent]').forEach(card => {
-    card.onclick = () => {
-      state.intent = card.dataset.intent;
-      try { sessionStorage.setItem('eticket-intent', state.intent); } catch (_) { /* Optional memory. */ }
-    };
-  });
 }
 function login() {
   const glpi = (window.ETICKET_CONFIG || {}).glpiUrl || 'http://localhost:8081';
@@ -31,7 +37,7 @@ function login() {
         if (window.location.hash === '#/verificar') requestRoute(); else window.location.hash = '#/verificar';
         return;
       }
-      state.user = data.user; state.csrf = data.csrf; state.prefillUser = '';
+      state.user = data.user; state.csrf = data.csrf; state.prefillUser = ''; rememberSession();
       if (!state.user) throw new Error('La cuenta no tiene un perfil de soporte activo.');
       document.getElementById('password').value = ''; notice(''); shell();
       if (window.location.hash === '#/inicio') requestRoute(); else window.location.hash = '#/inicio';
@@ -39,7 +45,7 @@ function login() {
   };
 }
 function register() {
-  main.innerHTML = `<section class="login-grid">${storyHtml('Crea tu cuenta y empieza hoy', 'Regístrate una sola vez para enviar solicitudes y seguir cada conversación con el equipo.')}<form id="register-form" class="login-form"><h2>Crea tu cuenta</h2><p>Completa tus datos para crear una cuenta de cliente en Eticket. En tu primer ingreso te enviaremos un código al correo.</p><div class="field"><label for="reg-name">Nombre completo</label><input id="reg-name" name="name" autocomplete="name" required minlength="3" maxlength="120" placeholder="Ej.: Camila Rojas"></div><div class="field"><label for="reg-email">Correo electrónico</label><input id="reg-email" name="email" type="email" autocomplete="email" required maxlength="255" placeholder="nombre@gmail.com"><small>Usa este correo para iniciar sesión.</small></div><div class="field"><label for="reg-password">Contraseña</label><div class="password-row"><input id="reg-password" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128" aria-describedby="reg-password-hint"><button type="button" class="button subtle small" id="show-reg-password" aria-label="Mostrar contraseñas" aria-pressed="false">Mostrar</button></div><small id="reg-password-hint">Mínimo 8 caracteres. Combina letras y números, y no la uses en otros sitios.</small></div><div class="field"><label for="reg-password2">Repite la contraseña</label><input id="reg-password2" type="password" autocomplete="new-password" required minlength="8" maxlength="128"></div><label class="check-field consent"><input type="checkbox" id="reg-consent" required><span>Acepto la <button type="button" class="link-button" data-open-privacy data-privacy-accept>política de privacidad</button> y el uso de mis datos para gestionar mis solicitudes.</span></label><p class="inline-error" id="register-error" role="alert" hidden></p><button type="submit" class="button">Crear cuenta <span aria-hidden="true">→</span></button><p class="login-switch">¿Ya tienes cuenta? <a href="#/ingresar">Inicia sesión</a></p></form></section>`;
+  main.innerHTML = `<section class="login-grid">${storyHtml('Crea tu cuenta y empieza hoy', 'Regístrate una sola vez para enviar solicitudes y seguir cada conversación con el equipo.')}<form id="register-form" class="login-form"><h2>Crea tu cuenta</h2><p>Completa tus datos para crear una cuenta de cliente en Eticket. En tu primer ingreso te enviaremos un código al correo.</p><div class="field"><label for="reg-name">Nombre completo</label><input id="reg-name" name="name" autocomplete="name" required minlength="3" maxlength="120" placeholder="Ej.: Camila Rojas"></div><div class="field"><label for="reg-email">Correo electrónico</label><input id="reg-email" name="email" type="email" autocomplete="email" required maxlength="255" placeholder="nombre@gmail.com" aria-describedby="reg-email-hint"><small id="reg-email-hint">Usa este correo para iniciar sesión.</small></div><div class="field"><label for="reg-password">Contraseña</label><div class="password-row"><input id="reg-password" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128" aria-describedby="reg-password-hint"><button type="button" class="button subtle small" id="show-reg-password" aria-label="Mostrar contraseñas" aria-pressed="false">Mostrar</button></div><small id="reg-password-hint">Mínimo 8 caracteres. Combina letras y números, y no la uses en otros sitios.</small></div><div class="field"><label for="reg-password2">Repite la contraseña</label><input id="reg-password2" type="password" autocomplete="new-password" required minlength="8" maxlength="128"></div><div class="check-field consent"><input type="checkbox" id="reg-consent" required><div><label for="reg-consent">Acepto la política de privacidad y el uso de mis datos para gestionar mis solicitudes.</label><button type="button" class="link-button" data-open-privacy data-privacy-accept>Leer política de privacidad</button></div></div><p class="inline-error" id="register-error" role="alert" hidden></p><button type="submit" class="button">Crear cuenta <span aria-hidden="true">→</span></button><p class="login-switch">¿Ya tienes cuenta? <a href="#/ingresar">Inicia sesión</a></p></form></section>`;
   bindPasswordToggle('show-reg-password', ['reg-password', 'reg-password2']);
   document.getElementById('register-form').onsubmit = event => {
     event.preventDefault();
@@ -102,6 +108,7 @@ function bindVerify() {
       state.user = data.user;
       state.csrf = data.csrf;
       state.mfa = null;
+      rememberSession();
       if (!data.backup_codes?.length) { window.location.hash = '#/inicio'; return; }
       shell();
       main.innerHTML = `<section class="panel"><h1>Códigos de recuperación</h1><p>Guarda estos códigos en un lugar seguro. Cada uno se puede usar una vez si pierdes acceso a tu autenticador.</p><ul>${data.backup_codes.map(code => `<li><code>${esc(code)}</code></li>`).join('')}</ul><a class="button" href="#/inicio">Continuar a mi espacio</a></section>`;

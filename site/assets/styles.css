@@ -31,7 +31,7 @@ body {
   color: var(--ink);
   background: var(--white);
   font-family: var(--font);
-  font-size: 17px;
+  font-size: 1.0625rem;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -90,6 +90,9 @@ p {
 .container {
   width: min(100% - 48px, var(--container));
   margin-inline: auto;
+}
+.static-section {
+  padding-block: 32px;
 }
 
 .sr-only {
@@ -1482,7 +1485,7 @@ p {
 
 @media (max-width: 640px) {
   body {
-    font-size: 16px;
+    font-size: 1rem;
   }
 
   .container {

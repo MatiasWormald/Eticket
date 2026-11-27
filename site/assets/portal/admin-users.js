@@ -1,4 +1,4 @@
-import { api, esc, notice, state, submit } from './core.js';
+import { api, confirmAction, esc, notice, state, submit } from './core.js';
 import { chip, tierLabel, TIERS } from './tiers.js';
 import { USER_ROLES } from './profile.js';
 
@@ -92,7 +92,7 @@ async function usersAdmin(el, fallbackUrl) {
     else if (target.dataset.editUser) { editing = users.find(u => String(u.id) === target.dataset.editUser) || null; render(); el.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
     else if (target.dataset.deleteUser) {
       const user = users.find(u => String(u.id) === target.dataset.deleteUser);
-      if (!user || !window.confirm(`¿Eliminar la cuenta de ${user.name}? Esta acción es permanente.`)) return;
+      if (!user || !await confirmAction({ title: 'Eliminar cuenta', message: `¿Eliminar la cuenta de ${user.name}? Esta acción es permanente.`, confirmLabel: 'Eliminar cuenta' })) return;
       target.disabled = true;
       try {
         await api('delete_user', { id: user.id });

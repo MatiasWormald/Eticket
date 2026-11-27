@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="text-scale" content="scale">
   <title>Centro de consultas | Hub Tech ULS</title>
   <meta name="description" content="Guía y acceso al centro de consultas del Hub Tech ULS. Crea, revisa y sigue tus tickets en GLPI.">
   <meta name="theme-color" content="#c8102e">
@@ -15,7 +16,7 @@
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="index.html" aria-label="Hub Tech ULS - Inicio">
-        <img src="assets/logo.svg" alt="Hub Tech ULS" width="252" height="56">
+        <img src="assets/logo.svg" alt="Hub Tech ULS" width="252" height="56" fetchpriority="high">
       </a>
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
         <span class="sr-only">Abrir menú</span>
@@ -31,7 +32,7 @@
     </div>
   </header>
 
-  <main id="contenido">
+  <main id="contenido" tabindex="-1">
     <section class="page-hero">
       <div class="container page-hero-grid">
         <div>
@@ -60,6 +61,7 @@
 
     <section class="section section-tight">
       <div class="container">
+        <h2 class="sr-only">Tipos de solicitud</h2>
         <div class="quick-grid">
           <a class="quick-card" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">
             <span class="quick-tag">Incidente</span>
@@ -181,9 +183,10 @@
   </main>
 
   <footer class="site-footer">
+    <h2 class="sr-only">Enlaces del pie de página</h2>
     <div class="container footer-grid">
       <div class="footer-brand">
-        <img src="assets/logo.svg" alt="Hub Tech ULS" width="252" height="56">
+        <img src="assets/logo.svg" alt="Hub Tech ULS" width="252" height="56" loading="lazy">
         <p>Hub Tech ULS · eTicket<br>Universidad estatal chilena</p>
       </div>
       <div class="footer-col">

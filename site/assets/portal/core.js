@@ -20,10 +20,21 @@ const date = value => {
   return Number.isNaN(parsed.getTime()) ? value : new Intl.DateTimeFormat('es-CL', { dateStyle: 'medium', timeStyle: 'short' }).format(parsed);
 };
 const badge = t => `<span class="status status-${Number(t.status)}">${esc(t.status_label)}</span>`;
-const fileField = `<div class="field"><label for="file">Adjuntar evidencia <span class="muted">(opcional)</span></label><input id="file" name="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.txt"><small>PDF, PNG, JPG o TXT. Máximo 10 MB. Evita incluir contraseñas o datos sensibles.</small></div>`;
+const fileField = `<div class="field"><label for="file">Adjuntar evidencia <span class="muted">(opcional)</span></label><input id="file" name="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.txt" aria-describedby="file-hint"><small id="file-hint">PDF, PNG, JPG o TXT. Máximo 10 MB. Evita incluir contraseñas o datos sensibles.</small></div>`;
 function notice(text, error = false) {
   const el = document.getElementById('notice');
   el.textContent = text; el.className = 'notice' + (error ? ' error' : ''); el.hidden = !text;
+}
+function confirmAction({ title, message, confirmLabel = 'Confirmar' }) {
+  const dialog = document.getElementById('confirm-dialog');
+  document.getElementById('confirm-action-title').textContent = title || 'Confirmar acción';
+  document.getElementById('confirm-action-message').textContent = message || '';
+  document.getElementById('confirm-action').textContent = confirmLabel;
+  return new Promise(resolve => {
+    dialog.returnValue = '';
+    dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
+    dialog.showModal();
+  });
 }
 function skeleton(label, type = "page") {
   const lines = '<span></span><span></span><span></span>';
@@ -88,11 +99,12 @@ function requestRoute() {
 
 async function endSession(message) {
   Object.assign(state, { user: null, mfa: null, query: '', status: '', offset: 0, intent: '' });
-  try { sessionStorage.removeItem('eticket-intent'); } catch (_) { /* Optional memory. */ }
+  try { sessionStorage.removeItem('eticket-intent'); sessionStorage.removeItem('eticket-known-session'); } catch (_) { /* Optional memory. */ }
+  document.documentElement.removeAttribute('data-eticket-session');
   history.replaceState(null, '', window.location.pathname + window.location.search + '#/');
   requestRoute();
   notice(message);
   state.csrf = (await api('session')).csrf;
 }
 
-export { main, state, INTENTS, esc, date, badge, fileField, notice, skeleton, api, canCreate, shell, submit, requestRoute, endSession };
+export { main, state, INTENTS, esc, date, badge, fileField, notice, confirmAction, skeleton, api, canCreate, shell, submit, requestRoute, endSession };

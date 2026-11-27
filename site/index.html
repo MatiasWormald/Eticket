@@ -3,18 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="text-scale" content="scale">
   <meta name="theme-color" content="#c8102e">
   <title>Eticket · Centro de ayuda Tech Hub</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/portal.css?v=20261122d">
-  <script src="config.js?v=20261122d" defer></script>
-  <script src="assets/layout.js?v=20261122d" defer></script>
-  <script type="module" src="assets/portal.js?v=20261122i"></script>
+  <link rel="stylesheet" href="assets/portal.css?v=20261125a">
+  <script src="config.js?v=20261125a" defer></script>
+  <script src="assets/layout.js?v=20261125a" defer></script>
+  <script type="module" src="assets/portal.js?v=20261125a" fetchpriority="high"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Saltar al contenido</a>
   <header class="topbar">
-    <a class="brand" href="#/inicio" aria-label="Eticket, inicio"><img src="assets/logo-techhub-uls.png" alt="Tech Hub ULS" width="216" height="48"><span class="brand-name">Eticket<svg class="brand-ticket" viewBox="0 0 28 20" aria-hidden="true" focusable="false"><path d="M3 2h22a1 1 0 0 1 1 1v4a3 3 0 0 0 0 6v4a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-4a3 3 0 0 0 0-6V3a1 1 0 0 1 1-1z"/><path class="brand-ticket-cut" d="M18 4.5v11"/><path class="brand-ticket-check" d="M7.5 10.2l2.4 2.4 4.4-4.8"/></svg></span></a>
+    <a class="brand" href="#/inicio" aria-label="Eticket, inicio"><img src="assets/logo-techhub-uls.png" alt="Tech Hub ULS" width="841" height="469" fetchpriority="high"><span class="brand-name">Eticket<svg class="brand-ticket" viewBox="0 0 28 20" aria-hidden="true" focusable="false"><path d="M3 2h22a1 1 0 0 1 1 1v4a3 3 0 0 0 0 6v4a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-4a3 3 0 0 0 0-6V3a1 1 0 0 1 1-1z"/><path class="brand-ticket-cut" d="M18 4.5v11"/><path class="brand-ticket-check" d="M7.5 10.2l2.4 2.4 4.4-4.8"/></svg></span></a>
     <div class="top-actions"><a id="origin-link" class="back-link" hidden>← Volver al sitio de origen</a><span class="service-label"><span></span> Centro de ayuda</span><a id="profile-link" href="#/perfil" data-nav="perfil" class="button subtle small" hidden>Mi perfil</a><button id="logout" class="button danger small" hidden>Cerrar sesión</button></div>
   </header>
   <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
@@ -30,10 +31,10 @@
       <div class="sidebar-help"><span class="help-mark">?</span><strong>Estamos para ayudarte</strong><p>Describe lo que ocurre y sigue la conversación desde aquí.</p><a href="guia.html">Guía de ayuda ↗</a></div>
       <div class="account"><span class="avatar" id="account-avatar"></span><div><strong id="account-name"></strong><small id="account-role"></small></div></div>
     </aside>
-    <main id="main" tabindex="-1"><div class="skeleton skeleton-page" role="status"><span class="visually-hidden">Preparando tu espacio de ayuda</span><div aria-hidden="true"><div class="skeleton-heading"><span></span><span></span></div><div class="skeleton-block"><span></span><span></span><span></span></div><div class="skeleton-block"><span></span><span></span><span></span></div></div></div></main>
+    <main id="main" tabindex="-1" data-static-welcome="true"><section class="start static-welcome"><p class="eyebrow">TECH HUB ULS / CENTRO DE AYUDA</p><h1>¿Cómo podemos ayudarte?</h1><p class="lead">Elige la opción que mejor describe lo que necesitas. Después ingresarás con tu cuenta para continuar.</p><div class="choice-grid start-grid"><a class="choice" href="#/ingresar" data-intent="servicio"><span class="choice-icon" aria-hidden="true">＋</span><h2>Quiero un servicio</h2><p>Pide un acceso, apoyo técnico, datos o un nuevo proyecto a alguna de nuestras unidades.</p><span>Continuar →</span></a><a class="choice" href="#/ingresar" data-intent="problema"><span class="choice-icon" aria-hidden="true">!</span><h2>Tengo un problema</h2><p>Algo dejó de funcionar o no funciona como esperabas: un sistema, un acceso o un equipo.</p><span>Continuar →</span></a></div><p class="start-login">Para entrar, elige una de las dos opciones. Si ya tienes solicitudes, las verás al iniciar sesión.</p></section></main>
   </div>
   <footer class="site-footer" id="site-footer"></footer>
-  <dialog id="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">Eliminar definitivamente</h2><p>Esta solicitud se eliminará de GLPI de forma permanente.</p><div class="actions"><button class="button subtle" id="cancel-delete">Cancelar</button><button class="button danger" id="confirm-delete">Eliminar definitivamente</button></div></dialog>
+  <dialog id="confirm-dialog" aria-labelledby="confirm-action-title" aria-describedby="confirm-action-message"><h2 id="confirm-action-title">Confirmar acción</h2><p id="confirm-action-message"></p><form method="dialog" class="actions"><button class="button subtle" value="cancel" autofocus>Cancelar</button><button class="button danger" id="confirm-action" value="confirm">Confirmar</button></form></dialog>
   <noscript>Activa JavaScript para utilizar el portal de solicitudes.</noscript>
 </body>
 </html>

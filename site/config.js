@@ -6,6 +6,8 @@ window.ETICKET_CONFIG = {
   /* Imagen del pie de página. */
   footerImage: "assets/techhub_uls.png",
   footerImageAlt: "Tech Hub ULS",
+  footerImageWidth: 1654,
+  footerImageHeight: 269,
 
   /* Integrantes del pie de página */
   team: [
@@ -16,3 +18,6 @@ window.ETICKET_CONFIG = {
     { name: "Nombre Apellido", url: "" },
   ]
 };
+try {
+  if (sessionStorage.getItem('eticket-known-session')) document.documentElement.dataset.eticketSession = 'known';
+} catch (_) {}

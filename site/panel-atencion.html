@@ -1,23 +1,25 @@
 <!doctype html>
 <html lang="es-CL">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8">  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="text-scale" content="scale">
 <title>Seguimiento y atención | Hub Tech ULS</title>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
+<a class="skip-link" href="#contenido">Saltar al contenido</a>
 <header class="site-header"><div class="container header-inner">
-<a class="brand" href="index.html"><img src="assets/logo.svg" alt="Hub Tech ULS"></a>
+<a class="brand" href="index.html"><img src="assets/logo.svg" alt="Hub Tech ULS" width="252" height="56" fetchpriority="high"></a>
 <nav class="main-nav"><a href="index.html">Inicio</a><a href="consultas.html">Centro de consultas</a><a href="crear-consulta.html">Crear ticket</a><a href="panel-atencion.html">Mis tickets</a></nav>
 </div></header>
-<main><section class="page-hero"><div class="container">
+<main id="contenido" tabindex="-1"><section class="page-hero"><div class="container">
 <p class="eyebrow">Mesa de ayuda · Acceso con tu cuenta</p>
 <h1>Seguimiento y atención</h1><p class="lead">Consulta el estado y responde en el seguimiento de tu ticket. Si ingresas como técnico, podrás atender solicitudes, asignarlas y registrar una solución.</p>
 <a class="btn btn-primary" data-glpi-path="/front/ticket.php" href="http://localhost:8081/front/ticket.php">Abrir mis tickets</a>
 <a class="btn btn-ghost" data-glpi-path="/ServiceCatalog" href="http://localhost:8081/ServiceCatalog">Catálogo de servicios</a>
 </div></section>
-<section class="container" style="padding-block: 32px">
+<section class="container static-section">
 <h2>Cómo usar la mesa de ayuda</h2>
 <ol><li>Ingresa con tu usuario y contraseña de GLPI.</li><li>Selecciona un servicio y describe el problema, el resultado esperado y los pasos para reproducirlo.</li><li>Guarda el número del ticket. Desde Mis tickets puedes consultar el estado, agregar respuestas y adjuntar evidencia.</li><li>Cuando el equipo publique una solución, revísala y acepta o rechaza indicando el motivo.</li></ol>
 <p>Para probar ambos roles, usa ventanas de navegador separadas para el cliente y el técnico. Las credenciales locales se encuentran en el archivo .env.demo del proyecto.</p>
